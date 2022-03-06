@@ -1,0 +1,8 @@
+<meta>
+	<info name="shader_fxaa" description="Fast-Approximate Anti Aliasing (FXAA)" version="0.0.5" type="script" />
+	<min_mta_version client="1.3.3" server="1.3.3" />
+	<script src="c_fxaa.lua" type="client" />
+	<script src="c_rtpool.lua" type="client" />
+	<script src="c_switch.lua" type="client" />
+	<file src="fx/FXAA.fx" type="client" />
+</meta>

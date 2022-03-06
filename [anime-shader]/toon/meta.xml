@@ -1,0 +1,10 @@
+<meta>
+    <script src="toon.lua" type="client"/>
+    <file src="mta-helper.fx" type="client"/>
+    <file src="cel.fx" type="client"/>
+    <file src="cel2.fx" type="client"/>
+    <file src="rim.fx" type="client"/>
+    <file src="outline.fx" type="client"/>
+
+    <include resource="a_bloom"/>
+</meta>
