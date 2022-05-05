@@ -73,17 +73,18 @@ float4 RimLightVertexColorShader(VSInput VS)
   
     // Use static rim
     //float4 Fresnel = (1-saturate(pow(saturate(dot(Normal,View )),RimLightInten)))*RimLightColor*RimLightInten;
-    float rimLight = sunSize > 1 ? RimLightInten : 0;
-    float4 Fresnel = (1-saturate(pow(saturate(dot(Normal,View )),rimLight)));
+
+    float4 Fresnel = (1-saturate(pow(saturate(dot(Normal,View )),RimLightInten)));
     Fresnel = smoothstep(RimMin,RimMax, Fresnel);
     Fresnel = smoothstep(0, RimSmooth, Fresnel );
 
     //bloom
+    float rampInterp =  map(sunSize, 1, 5,0,1);
     float3 worldNormal = normalize(View);
     float3 worldLightDir = normalize(-sunDirection.xyz);
     float NdotL = max(0, dot(worldNormal, worldLightDir));
     float rimBloom = pow (Fresnel, 1)  * NdotL;
-    Fresnel *= rimBloom *RimLightColor*rimLight;
+    Fresnel *= rimBloom *RimLightColor*RimLightInten * rampInterp;
     return Fresnel;
 }
 
