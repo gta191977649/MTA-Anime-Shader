@@ -19,6 +19,7 @@
 -- onClientResourceStart
 --		Auto switch on at start
 --------------------------------
+--[[
 addEventHandler( "onClientResourceStart", getResourceRootElement( getThisResource()),
 	function()
 		triggerEvent( "switchBloom", resourceRoot, true )
@@ -29,7 +30,7 @@ addEventHandler( "onClientResourceStart", getResourceRootElement( getThisResourc
 		)
 	end
 )
-
+--]]
 
 --------------------------------
 -- Switch effect on or off

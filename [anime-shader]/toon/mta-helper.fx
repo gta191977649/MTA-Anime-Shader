@@ -1,12 +1,12 @@
 //
 // mta-helper.fx
 //
-// File version: 0.0.1
-// Date updated: 2011-09-26
+// File version: 0.0.2
+// Date updated: 2013-07-21
 //
 // Big file of doom containg most of the stuff you need to get shaders working with MTA
+// Added light states to support pointlights
 //
-
 
 //
 // This file has 4 sections:
@@ -15,6 +15,7 @@
 //      3. Helper functions
 //      4. Normal generation
 //
+
 
 
 //####################################################################################################################
@@ -119,6 +120,55 @@ int gDeclNormal             < string vertexDeclState="Normal"; >;       // Set t
 
 
 
+//------------------------------------------------------------------------------------------
+// lightEnableState - String value should be a light number followed by 'Enable'
+//------------------------------------------------------------------------------------------
+
+int gLight0Enable           < string lightEnableState="0,Enable"; >;
+int gLight1Enable           < string lightEnableState="1,Enable"; >;
+int gLight2Enable           < string lightEnableState="2,Enable"; >;
+int gLight3Enable           < string lightEnableState="3,Enable"; >;
+int gLight4Enable           < string lightEnableState="4,Enable"; >;
+
+//------------------------------------------------------------------------------------------
+// lightState - String value should be a light number followed by one of the members from D3DLIGHT9  http://msdn.microsoft.com/en-us/library/bb172566%28VS.85%29.aspx
+//------------------------------------------------------------------------------------------
+
+int gLight0Type                 < string lightState="0,Type"; >;
+float4 gLight0Diffuse           < string lightState="0,Diffuse"; >;
+float4 gLight0Specular          < string lightState="0,Specular"; >;
+float4 gLight0Ambient           < string lightState="0,Ambient"; >;
+float3 gLight0Position          < string lightState="0,Position"; >;
+float3 gLight0Direction         < string lightState="0,Direction"; >;
+
+int gLight1Type                 < string lightState="1,Type"; >;
+float4 gLight1Diffuse           < string lightState="1,Diffuse"; >;
+float4 gLight1Specular          < string lightState="1,Specular"; >;
+float4 gLight1Ambient           < string lightState="1,Ambient"; >;
+float3 gLight1Position          < string lightState="1,Position"; >;
+float3 gLight1Direction         < string lightState="1,Direction"; >;
+
+int gLight2Type                 < string lightState="2,Type"; >;
+float4 gLight2Diffuse           < string lightState="2,Diffuse"; >;
+float4 gLight2Specular          < string lightState="2,Specular"; >;
+float4 gLight2Ambient           < string lightState="2,Ambient"; >;
+float3 gLight2Position          < string lightState="2,Position"; >;
+float3 gLight2Direction         < string lightState="2,Direction"; >;
+
+int gLight3Type                 < string lightState="3,Type"; >;
+float4 gLight3Diffuse           < string lightState="3,Diffuse"; >;
+float4 gLight3Specular          < string lightState="3,Specular"; >;
+float4 gLight3Ambient           < string lightState="3,Ambient"; >;
+float3 gLight3Position          < string lightState="3,Position"; >;
+float3 gLight3Direction         < string lightState="3,Direction"; >;
+
+int gLight4Type                 < string lightState="4,Type"; >;
+float4 gLight4Diffuse           < string lightState="4,Diffuse"; >;
+float4 gLight4Specular          < string lightState="4,Specular"; >;
+float4 gLight4Ambient           < string lightState="4,Ambient"; >;
+float3 gLight4Position          < string lightState="4,Position"; >;
+float3 gLight4Direction         < string lightState="4,Direction"; >;
+
 //####################################################################################################################
 //####################################################################################################################
 //
@@ -198,7 +248,7 @@ float4 MTACalcGTABuildingDiffuse( float4 InDiffuse )
 // MTACalcGTAVehicleDiffuse
 // - Calculate GTA lighting for vehicles
 //------------------------------------------------------------------------------------------
-float4 MTACalcGTAVehicleDiffuse( float3 WorldNormal, float4 InDiffuse)
+float4 MTACalcGTAVehicleDiffuse( float3 WorldNormal, float4 InDiffuse )
 {
     // Calculate diffuse color by doing what D3D usually does
     float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
@@ -208,48 +258,51 @@ float4 MTACalcGTAVehicleDiffuse( float3 WorldNormal, float4 InDiffuse)
     float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
 
     // Add the strongest light
-    float DirectionFactor = max(0.2, dot(WorldNormal, -gLightDirection ));
-    float4 TotalDiffuse = (diffuse * DirectionFactor );
-
-    float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
-    OutDiffuse.a *= diffuse.a;
-
-    return OutDiffuse;
-}
-
-float4 MTACalcGTAVehicleDiffuse2( float3 WorldNormal, float4 InDiffuse, float3 LightDirection )
-{
-    // Calculate diffuse color by doing what D3D usually does
-    float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
-    float4 diffuse  = gDiffuseMaterialSource  == 0 ? gMaterialDiffuse  : InDiffuse;
-    float4 emissive = gEmissiveMaterialSource == 0 ? gMaterialEmissive : InDiffuse;
-
-    float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
-
-    // Add the strongest light
-	float3 lightDirection = LightDirection;
-    float DirectionFactor = max(0.2, dot(WorldNormal, -lightDirection ));
-    float4 TotalDiffuse = (diffuse * DirectionFactor );
-
-    float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
-    OutDiffuse.a *= diffuse.a;
-
-    return OutDiffuse;
-}
-
-float4 MTACalcGTADynamicDiffuse( float3 WorldNormal, float4 InDiffuse, float3 LightDirection )
-{
-    // Calculate diffuse color by doing what D3D usually does
-    float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
-    float4 diffuse  = gDiffuseMaterialSource  == 0 ? gMaterialDiffuse  : InDiffuse;
-    float4 emissive = gEmissiveMaterialSource == 0 ? gMaterialEmissive : InDiffuse;
-
-    float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
-
-    // Add the strongest light
-    float DirectionFactor = max(0,dot(WorldNormal, -LightDirection ));
+    float DirectionFactor = max(0,dot(WorldNormal, -gLightDirection ));
     float4 TotalDiffuse = ( diffuse * gLightDiffuse * DirectionFactor );
 
+    float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
+    OutDiffuse.a *= diffuse.a;
+
+    return OutDiffuse;
+}
+
+//------------------------------------------------------------------------------------------
+// MTACalcGTACompleteDiffuse
+// - Calculate GTA lighting for vehicles (all 4 lights)
+//------------------------------------------------------------------------------------------
+float4 MTACalcGTACompleteDiffuse( float3 WorldNormal, float4 InDiffuse )
+{
+    // Calculate diffuse color by doing what D3D usually does
+    float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
+    float4 diffuse  = gDiffuseMaterialSource  == 0 ? gMaterialDiffuse  : InDiffuse;
+    float4 emissive = gEmissiveMaterialSource == 0 ? gMaterialEmissive : InDiffuse;
+
+    float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
+
+    // Add all the 4 pointlights
+    float DirectionFactor=0;
+    float4 TotalDiffuse=0;
+
+    if (gLight1Enable) {
+    DirectionFactor += max(0,dot(WorldNormal, -gLight1Direction ));
+    TotalDiffuse += ( gLight1Diffuse * DirectionFactor );
+                     }
+    if (gLight2Enable) {
+    DirectionFactor += max(0,dot(WorldNormal, -gLight2Direction ));
+    TotalDiffuse += ( gLight2Diffuse * DirectionFactor );
+                     }
+    if (gLight3Enable) {
+    DirectionFactor += max(0,dot(WorldNormal, -gLight3Direction ));
+    TotalDiffuse += ( gLight3Diffuse * DirectionFactor );
+                     }
+    if (gLight4Enable) {
+    DirectionFactor += max(0,dot(WorldNormal, -gLight4Direction ));
+    TotalDiffuse += ( gLight4Diffuse * DirectionFactor );
+                     }	
+					 
+    TotalDiffuse *= diffuse;
+	
     float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
     OutDiffuse.a *= diffuse.a;
 
@@ -289,6 +342,7 @@ float MTACalculateSpecular( float3 CamDir, float3 LightDir, float3 SurfNormal, f
 }
 
 
+
 //####################################################################################################################
 //####################################################################################################################
 //
@@ -322,83 +376,4 @@ void MTAFixUpNormal( in out float3 OutNormal )
     // Incase we have no normal inputted
     if ( OutNormal.x == 0 && OutNormal.y == 0 && OutNormal.z == 0 )
         OutNormal = float3(0,0,1);   // Default to up
-}
-
-void MTAFixUpNormal2( in out float3 OutNormal )
-{
-    // Incase we have no normal inputted
-    if (OutNormal.x == 0 && OutNormal.y == 0 && OutNormal.z == 0 ) {OutNormal = float3(0, 0, 1);}
-		
-	if (OutNormal.x >= 0.97) {OutNormal.x = 1;}
-	if (OutNormal.x <= 0.03) {OutNormal.x = 0;}
-	if (OutNormal.y >= 0.97) {OutNormal.y = 1;}
-	if (OutNormal.y <= 0.03) {OutNormal.y = 0;}
-	if (OutNormal.z >= 0.97) {OutNormal.z = 1;}
-	if (OutNormal.z <= 0.03) {OutNormal.z = 0;}
-}
-
-//------------------------------------------------------------------------------------------
-// MTACalcNormalMap
-//------------------------------------------------------------------------------------------
-// The Sobel filter extracts the first order derivates of the image,
-// that is, the slope. The slope in X and Y directon allows us to
-// given a heightmap evaluate the normal for each pixel. This is
-// the same this as ATI's NormalMapGenerator application does,
-// except this is in hardware.
-//
-// These are the filter kernels:
-//
-//  SobelX       SobelY
-//  1  0 -1      1  2  1
-//  2  0 -2      0  0  0
-//  1  0 -1     -1 -2 -1
-
-float3 MTACalcNormalMap(sampler Sampler, float2 texCoord, float4 lightness, float textureSize)
-{
-   float off = 1.0 / textureSize;
-
-   // Take all neighbor samples
-   float4 s00 = tex2D(Sampler, texCoord + float2(-off, -off));
-   float4 s01 = tex2D(Sampler, texCoord + float2( 0,   -off));
-   float4 s02 = tex2D(Sampler, texCoord + float2( off, -off));
-
-   float4 s10 = tex2D(Sampler, texCoord + float2(-off,  0));
-   float4 s12 = tex2D(Sampler, texCoord + float2( off,  0));
-
-   float4 s20 = tex2D(Sampler, texCoord + float2(-off,  off));
-   float4 s21 = tex2D(Sampler, texCoord + float2( 0,    off));
-   float4 s22 = tex2D(Sampler, texCoord + float2( off,  off));
-
-   // Slope in X direction
-   float4 sobelX = s00 + 2 * s10 + s20 - s02 - 2 * s12 - s22;
-   // Slope in Y direction
-   float4 sobelY = s00 + 2 * s01 + s02 - s20 - 2 * s21 - s22;
-
-   // Weight the slope in all channels, we use grayscale as height
-   float sx = dot(sobelX, lightness);
-   float sy = dot(sobelY, lightness);
-
-   // Compose the normal
-   float3 normal = normalize(float3(sx, sy, 1));
-
-   // Pack [-1, 1] into [0, 1]
-   return float3(normal * 0.5 + 0.5);
-}
-
-//------------------------------------------------------------------------------------------
-// MTACalcNormalMap
-//------------------------------------------------------------------------------------------
-float3 MTAGetPixelGreyness(float4 color)
-{
-    // See how 'grey' the pixel is
-    float greyScale = dot(color.rgb, float3(0.3f, 0.59f, 0.11f));
-    float redExtra = abs(color.r - greyScale);
-    float greenExtra = abs(color.g - greyScale);
-    float blueExtra = abs(color.b - greyScale);
-    float colorness = redExtra * 0.3f + greenExtra * 0.59f + blueExtra * 0.11f;
-    colorness = colorness * 20 * greyScale;
-    colorness = colorness - 0.1;
-    float greyness = 1 - saturate(colorness);
-	
-	return greyness;
 }
