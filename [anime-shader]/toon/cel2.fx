@@ -44,6 +44,13 @@ struct PSInput
     float3 Normal : TEXCOORD1;
 };
 
+float map(float value, float min1, float max1, float min2, float max2) {
+    float perc = (value - min1) / (max1 - min1);
+    float v = perc * (max2 - min2) + min2;
+    v = v > max2 ? max2 : v;
+    v = v < min2 ? min2 : v;
+    return v;
+}
 
 float4 RimLightVertexColorShader(VSInput VS)
 {
@@ -79,12 +86,12 @@ float4 RimLightVertexColorShader(VSInput VS)
     Fresnel = smoothstep(0, RimSmooth, Fresnel );
 
     //bloom
-    float rampInterp =  map(sunSize, 1, 5,0,1);
+    float interp =  map(sunSize, 1, 8,0,1);
     float3 worldNormal = normalize(View);
     float3 worldLightDir = normalize(-sunDirection.xyz);
     float NdotL = max(0, dot(worldNormal, worldLightDir));
     float rimBloom = pow (Fresnel, 1)  * NdotL;
-    Fresnel *= rimBloom *RimLightColor*RimLightInten * rampInterp;
+    Fresnel *= rimBloom *RimLightColor*RimLightInten * interp;
     return Fresnel;
 }
 
@@ -107,13 +114,6 @@ PSInput VertexShaderFunction(VSInput VS)
     return PS;
 }
 
-float map(float value, float min1, float max1, float min2, float max2) {
-    float perc = (value - min1) / (max1 - min1);
-    float v = perc * (max2 - min2) + min2;
-    v = v > max2 ? max2 : v;
-    v = v < min2 ? min2 : v;
-    return v;
-}
 
 float4 PixelShaderFunction(PSInput PS): COLOR0
 {
