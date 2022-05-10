@@ -1,3 +1,19 @@
 <meta>
-    <script src="smaa.lua" type="client"/>
+	<oop>true</oop>
+	<info author="iryoku, joseignacioechevarria, bmasia, fernandn, diegog, XaskeL" />
+	<min_mta_version server="1.5.2-9.07903" client="1.5.2-9.07903"/>
+	
+	<!-- FILE -->
+	<file src="Shaders/mta-helper.fx" />
+	<file src="Shaders/SMAAUtils.fx" />
+	<file src="Shaders/SMAAEdgeDetection.fx" />
+	<file src="Shaders/SMAABlendingWeight.fx" />
+	<file src="Shaders/SMAANeighborhoodBlending.fx" />
+	
+	<file src="Textures/AreaTex.dds"/>
+	<file src="Textures/SearchTex.dds"/>
+	
+	<!-- CLIENT -->
+	<script type="client" cache="false" src="include.lua" />
+	<script type="client" cache="false" src="client.lua" />
 </meta>

@@ -7,7 +7,7 @@
 
 local orderPriority = "-2.5"	-- The lower this number, the later the effect is applied
 
-local maxAntialiasing = 8		-- The maximum number of antialiaisng passes.
+local maxAntialiasing = 4		-- The maximum number of antialiaisng passes.
 
 Settings = {}
 Settings.var = {}  
@@ -76,13 +76,13 @@ end
 function applySettings(v)
 	if not fxaaShader then return end
 	dxSetShaderValue(fxaaShader, "fViewportSize", scx, scy)
-	dxSetShaderValue(fxaaShader, "fViewportScale", 1, 1)
+	dxSetShaderValue(fxaaShader, "fViewportScale",1, 1)
 	dxSetShaderValue(fxaaShader, "fViewportPos", 0, 0)
 end
 -----------------------------------------------------------------------------------
 -- onClientHUDRender
 -----------------------------------------------------------------------------------
-addEventHandler( "onClientHUDRender", root,
+addEventHandler( "onClientRender", root,
     function()
 		if not bAllValid or not Settings.var then return end
 		local v = Settings.var
@@ -102,7 +102,7 @@ addEventHandler( "onClientHUDRender", root,
 		-- When we're done, turn the render target back to default
 		dxSetRenderTarget()
 
-		if current then dxDrawImage( 0, 0, scx, scy, current) end
+		if current then dxDrawImage( 0, 0, scx, scy, current,0,0,0,tocolor(255,255,255,255),false) end
 			
 		-- Debug stuff
 		if v.PreviewEnable > 0.5 then

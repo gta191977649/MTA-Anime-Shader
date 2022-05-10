@@ -6,8 +6,8 @@ float3 MainColor = float3(0.7, 0.7, 0.8);
 //float3 ShadowColor = float3(0.7, 0.7, 0.8);
 float LightStrength =0.8;
 //float ShadowStrength = 0.74;
-float ShadowRange = 0.8;
-float ShadowSmooth = 0.02;
+float ShadowRange = 0.1;
+float ShadowSmooth = 0.1;
 float3 sunDirection = float3(1,0,0);
 float sunSize = 1;
 float4 LineColor = float4(1,1,1,1);
@@ -19,6 +19,7 @@ float RimMin = 0.8;
 float RimMax = 1;
 float RimSmooth =0.02;
 float RimLightInten = 1;
+bool isClear = true;
 sampler2D MainTex  = sampler_state
 {
     Texture = <gTexture0>;
@@ -86,7 +87,7 @@ float4 RimLightVertexColorShader(VSInput VS)
     Fresnel = smoothstep(0, RimSmooth, Fresnel );
 
     //bloom
-    float interp =  map(sunSize, 1, 8,0,1);
+    float interp = isClear ? map(sunSize, 1, 8,0,1) : 0;
     float3 worldNormal = normalize(View);
     float3 worldLightDir = normalize(-sunDirection.xyz);
     float NdotL = max(0, dot(worldNormal, worldLightDir));
@@ -130,7 +131,7 @@ float4 PixelShaderFunction(PSInput PS): COLOR0
     
     //float light = sunSize < 1 ? 0.5 : sunSize > 1 ? 1 : sunSize;
     //float light = map(sunSize, 1, 3,0,1);
-    float rampInterp =  map(sunSize, 1, 5,0,1);
+    float rampInterp = isClear ? map(sunSize, 1, 5,0,1) : 0;
     float ramp = smoothstep(0, ShadowSmooth, halfLambert - ShadowRange);
 
     float3 Color =  MainColor *  LightStrength;
