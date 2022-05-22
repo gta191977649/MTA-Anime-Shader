@@ -12,7 +12,7 @@ float3 sunDirection = float3(1,0,0);
 float sunSize = 1;
 float4 LineColor = float4(1,1,1,1);
 // Outline related
-float LineThickness = 0.0018;
+float LineThickness = 0.0012;
 float LineDepth = 0.2;
 // Rim Lighting
 float RimMin = 0.8;
@@ -102,6 +102,7 @@ PSInput VertexShaderFunction(VSInput VS)
     float4 projPos = mul( viewPos, gProjection);
     PS.Position = projPos;
 
+
     PS.TexCoord = VS.TexCoord;
 
 
@@ -161,12 +162,12 @@ PSInput OutlineVertexShader(VSInput input)
     float4 original = mul(mul(mul(input.Position, gWorld), gView), gProjection);
     float4 normal = mul(mul(mul(input.Normal, gWorld), gView), gProjection);
 
-    
+
     //float3 extendDir = mul(MTACalcWorldPosition(input.Position), normal);
     float2 extendDir = normalize(TransformViewToProjection(original.xy));
 
     output.Position = original + (mul(LineThickness, normal));
-    output.Position.xy += extendDir * (output.Position.w * LineThickness); 
+    output.Position.xy += extendDir * (output.Position.w * LineThickness ); 
 
     return output;
 }
@@ -192,13 +193,11 @@ technique tec{
 
     pass P2
     {
-        //SRGBWriteEnable = true;
+
         VertexShader = compile vs_2_0 OutlineVertexShader();
         PixelShader = compile ps_2_0 OutlinePixelShader();
         CullMode = 3;
-        //ZWriteEnable = true;
-        //ZEnable = true;
-        //AlphaBlendEnable = true;
+
     }
 }
 
