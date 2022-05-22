@@ -5,6 +5,7 @@
     <file src="cel2.fx" type="client"/>
     <file src="rim.fx" type="client"/>
     <file src="outline.fx" type="client"/>
+    <file src="normal.fx" type="client"/>
     <include resource="a_sun"/>
     <include resource="a_bloom"/>
     <oop>true</oop>

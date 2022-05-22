@@ -17,15 +17,12 @@ float LineDepth = 0.2;
 // Rim Lighting
 float RimMin = 0.8;
 float RimMax = 1;
-float RimSmooth =0.02;
+float RimSmooth =0.01;
 float RimLightInten = 1;
 bool isClear = true;
-sampler2D MainTex  = sampler_state
+sampler MainTex  = sampler_state
 {
     Texture = <gTexture0>;
-    MinFilter = linear;
-    MagFilter = linear;
-    MipFilter = linear;
 };
 
 struct VSInput
@@ -100,23 +97,25 @@ PSInput VertexShaderFunction(VSInput VS)
 {
     PSInput PS; 
     MTAFixUpNormal( VS.Normal );
-    float4 worldPosition = mul(VS.Position, gWorld);
-    float4 viewPosition = mul(worldPosition, gView);
-
-    PS.Position = mul(viewPosition, gProjection);
+    float4 worldPos = mul(float4(VS.Position.xyz,1), gWorld );	
+    float4 viewPos = mul( worldPos , gView );
+    float4 projPos = mul( viewPos, gProjection);
+    PS.Position = projPos;
 
     PS.TexCoord = VS.TexCoord;
 
 
-    PS.Diffuse = MTACalcGTABuildingDiffuse( VS.Diffuse );	
-    PS.Normal = mul(VS.Normal, gWorldInverseTranspose); 
+   
+    PS.Normal = mul(VS.Normal, (float3x3)gWorld);
+    PS.Diffuse = MTACalcGTACompleteDiffuse(PS.Normal, VS.Diffuse);
+
     // add rim light
     PS.Rim = RimLightVertexColorShader(VS);
     return PS;
 }
 
 
-float4 PixelShaderFunction(PSInput PS): COLOR0
+float4 PixelShaderFunction(PSInput PS): COLOR
 {
  
     float4 col = 1;
@@ -138,18 +137,15 @@ float4 PixelShaderFunction(PSInput PS): COLOR0
     float ShadowStrength =   LightStrength  * 0.9;
     float3 diffuse = lerp(Color * ShadowStrength,Color, ramp * rampInterp) ;
 
-    //float3 diffuse = float3(1,1,1);
-    //diffuse *= mainTex ;
-    
     //col.rgba = PS.Rim ;
 
-    col.rgba =  float4(diffuse,1) * mainTex + PS.Rim ;
-
-
+    col.rgb =  mainTex.rgb * diffuse;
+    //col.a = PS.Diffuse.a;
+    col.a = mainTex.a == 0 ? 0 : PS.Diffuse.a;
+    col.rgba += PS.Rim;
+    
     return col;
 }
-
-
 
 
 float3 TransformViewToProjection (float3 v) {
@@ -166,10 +162,9 @@ PSInput OutlineVertexShader(VSInput input)
     float4 normal = mul(mul(mul(input.Normal, gWorld), gView), gProjection);
 
     
-    //float3 norm = mul(MTACalcWorldPosition(input.Position), normal);
+    //float3 extendDir = mul(MTACalcWorldPosition(input.Position), normal);
     float2 extendDir = normalize(TransformViewToProjection(original.xy));
 
-    //output.Position = original + (mul(LineThickness, normal));
     output.Position = original + (mul(LineThickness, normal));
     output.Position.xy += extendDir * (output.Position.w * LineThickness); 
 
@@ -179,22 +174,25 @@ PSInput OutlineVertexShader(VSInput input)
 float4 OutlinePixelShader(PSInput input) : COLOR0
 {
     float4 color = tex2D(MainTex, input.TexCoord) * LineColor * LineDepth;
-
+    
     return color;
 }
 
-technique tec
-{
-    
+technique tec{
+
     pass P1
     {
+        MultiSampleAntialias = 1;
+        //FillMode = 2;
+        CullMode = 2;
         VertexShader = compile vs_2_0 VertexShaderFunction();
         PixelShader = compile ps_2_0 PixelShaderFunction();
-        CullMode = 2;
+        
     }
-   
+
     pass P2
     {
+        //SRGBWriteEnable = true;
         VertexShader = compile vs_2_0 OutlineVertexShader();
         PixelShader = compile ps_2_0 OutlinePixelShader();
         CullMode = 3;
@@ -202,5 +200,12 @@ technique tec
         //ZEnable = true;
         //AlphaBlendEnable = true;
     }
-    
+}
+
+technique fallback
+{
+    pass P0
+    {
+        // Just draw normally
+    }
 }

@@ -33,6 +33,8 @@ end)
 function createShader() 
     print("--------------------------------")
     toon = dxCreateShader("cel2.fx",0,0,false,"ped")
+    --toon = dxCreateShader("normal.fx",0,0,false,"ped")
+    
     engineApplyShaderToWorldTexture(toon, "*")
     triggerEvent( "switchBloom", root, true )
     triggerEvent( "switchSun", root, true )
