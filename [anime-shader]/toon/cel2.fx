@@ -1,13 +1,14 @@
 #include "mta-helper.fx"
 
 // Cell related
-float3 MainColor = float3(0.7, 0.7, 0.8);
+float3 LightColor = float3(0.7, 0.7, 0.8);
 
 //float3 ShadowColor = float3(0.7, 0.7, 0.8);
 float LightStrength =0.8;
 //float ShadowStrength = 0.74;
 float ShadowRange = 0.1;
 float ShadowSmooth = 0.1;
+float ShadowMutiplier = 0.9;
 float3 sunDirection = float3(1,0,0);
 float sunSize = 1;
 float4 LineColor = float4(1,1,1,1);
@@ -74,7 +75,7 @@ float4 RimLightVertexColorShader(VSInput VS)
     //float3 View = normalize(-sunDirection - normalize(gCameraDirection));
     float4 Diffuse = MTACalcGTABuildingDiffuse( VS.Diffuse );
     //float4 RimLightColor  =float4(1,1,1,1);
-    float4 RimLightColor  = float4(MainColor,1);
+    float4 RimLightColor  = float4(LightColor,1);
   
     // Use static rim
     //float4 Fresnel = (1-saturate(pow(saturate(dot(Normal,View )),RimLightInten)))*RimLightColor*RimLightInten;
@@ -108,7 +109,7 @@ PSInput VertexShaderFunction(VSInput VS)
 
    
     PS.Normal = mul(VS.Normal, (float3x3)gWorld);
-    PS.Diffuse = MTACalcGTACompleteDiffuse(PS.Normal, VS.Diffuse);
+    PS.Diffuse =MTACalcGTACompleteDiffuse(PS.Normal, VS.Diffuse);
 
     // add rim light
     PS.Rim = RimLightVertexColorShader(VS);
@@ -120,7 +121,7 @@ float4 PixelShaderFunction(PSInput PS): COLOR
 {
  
     float4 col = 1;
-    float4 mainTex  = tex2D(MainTex, PS.TexCoord);
+    float4 mainTex  = tex2D(MainTex, PS.TexCoord) ;
     //float3 worldNormal = normalize(PS.Position);
     float3 worldLightDir = normalize(-sunDirection.xyz);
     //float3 worldLightDir = sunDirection;
@@ -134,13 +135,13 @@ float4 PixelShaderFunction(PSInput PS): COLOR
     float rampInterp = isClear ? map(sunSize, 1, 5,0,1) : 0;
     float ramp = smoothstep(0, ShadowSmooth, halfLambert - ShadowRange);
 
-    float3 Color =  MainColor *  LightStrength;
-    float ShadowStrength =   LightStrength  * 0.9;
+    float3 Color =  LightColor *  LightStrength;
+    float ShadowStrength =   LightStrength  * ShadowMutiplier;
     float3 diffuse = lerp(Color * ShadowStrength,Color, ramp * rampInterp) ;
 
     //col.rgba = PS.Rim ;
 
-    col.rgb =  mainTex.rgb * diffuse;
+    col.rgb = mainTex.rgb * diffuse;
     //col.a = PS.Diffuse.a;
     col.a = mainTex.a == 0 ? 0 : PS.Diffuse.a;
     col.rgba += PS.Rim;

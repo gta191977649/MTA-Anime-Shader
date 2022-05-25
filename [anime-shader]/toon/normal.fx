@@ -55,8 +55,8 @@ PSInput VertexShaderFunction(VSInput VS)
     PS.TexCoord = VS.TexCoord;
 
     //-- Calculate GTA lighting for buildings
-    PS.Diffuse = MTACalcGTABuildingDiffuse( VS.Diffuse );
-    //PS.Diffuse = float4(VS.Normal,1);
+    //PS.Diffuse = MTACalcGTABuildingDiffuse( VS.Diffuse );
+    PS.Diffuse = float4(abs(VS.Normal),1);
     
     //--
     //-- NOTE: The above line is for GTA buildings.
@@ -82,7 +82,7 @@ float4 PixelShaderFunction(PSInput PS) : COLOR0
     float4 texel = tex2D(Sampler0, PS.TexCoord);
 
     //-- Apply diffuse lighting
-    float4 finalColor = texel * PS.Diffuse;
+    float4 finalColor = PS.Diffuse;
     //float4 finalColor = texel * PS.Diffuse;
 
     return finalColor;
@@ -99,7 +99,7 @@ technique tec
 
         VertexShader = compile vs_2_0 VertexShaderFunction();
         PixelShader = compile ps_2_0 PixelShaderFunction();
-      
+        CullMode = 3;
         
     }
 }
