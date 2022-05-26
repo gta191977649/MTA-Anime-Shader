@@ -18,7 +18,7 @@
 	<file src="tex/clouds.dds" type="client" />
 	<file src="tex/cloud2.dds" type="client" />
 	<file src="tex/cloud_genshin.dds" type="client" />
-	<file src="tex/clouds_normal.jpg" type="client" />
+	<file src="tex/cloud_genshin_normal.png" type="client" />
 	<file src="tex/moon/0.png" type="client" />
 	<file src="tex/moon/1.png" type="client" />
 	<file src="tex/moon/10.png" type="client" />

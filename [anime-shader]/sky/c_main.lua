@@ -43,7 +43,7 @@ function startDynamicSky()
 		else shaderTable.skyboxBottom = dxCreateShader ( "fx/shader_dynamicSky2bottom.fx", 3, 0, false, "object" ) end
 	shaderTable.clear = dxCreateShader ( "fx/shader_clear.fx", 3, 0, false, "world" )
 	textureTable.cloud = dxCreateTexture ( "tex/cloud_genshin.dds", "dxt5" )
-	textureTable.normal = dxCreateTexture ( "tex/clouds_normal.jpg", "dxt5" ) 
+	textureTable.normal = dxCreateTexture ( "tex/cloud_genshin.dds", "dxt5" ) 
 	textureTable.skybox = dxCreateTexture ( "tex/skybox.dds", "dxt5" )
 	moonPhase = getCurrentMoonPhase()
 	textureTable.moon = dxCreateTexture ( "tex/moon/"..toint( 20 - toint( moonPhase * 20 ) )..".png" )
