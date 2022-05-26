@@ -9,7 +9,7 @@
 ----------------------------------------------------------------
 local dynamicSkySettings = {
 		modelID = 2070,  -- model id to replace (2070, previous 15057)
-		modelAlpha = false, -- should the model be drawn last
+		modelAlpha = true, -- should the model be drawn last
 		sunPreRotation = {25, 0, 0}, -- roll -- pitch ( time) -- yaw
 		moonPreRotation = {0, 0, 0}, -- roll -- pitch ( time) -- yaw
 		moonShine = 1, -- moon 'shine through clouds' multiplier
@@ -18,7 +18,7 @@ local dynamicSkySettings = {
 		bottomCloudSpread = 200, -- range in which the bottom clouds will appear (after camera.z reaches farClipDistance)
 		enableIngameClouds = false, -- enable GTA clouds
 		enableCloudTextures = false, -- enable smog/clouds textures
-		enableHorizonBlending = false, -- should the sky gradually blend with horizon color
+		enableHorizonBlending = true, -- should the sky gradually blend with horizon color
 		stratosFade = {14000, 10000}, -- fake stratospheare effect
 		stratosBottomStars = false, -- stars on the bottom of the sphere (in the stratosphere)
 	}
@@ -35,15 +35,14 @@ local moonPhase = 0
 ----------------------------------------------------------------
 function startDynamicSky()
 	if dsEffectEnabled then return end
-	
-	--shaderTable.skyboxTropos = dxCreateShader ( "fx/shader_dynamicSky2tropos.fx", 2, 0, false, "object" )
+
 	shaderTable.skyboxTropos = dxCreateShader ( "fx/shader_cloud_genshin.fx", 2, 0, false, "object" )
 	if dynamicSkySettings.stratosBottomStars then shaderTable.skyboxStratos = dxCreateShader ( "fx/shader_dynamicSky2up.fx", 2, 0, false, "object" ) 
 	    else shaderTable.skyboxStratos = dxCreateShader ( "fx/shader_dynamicSky2stratos.fx", 2, 0, false, "object" ) end
 	if dynamicSkySettings.stratosBottomStars then shaderTable.skyboxBottom = dxCreateShader ( "fx/shader_dynamicSky2down.fx", 3, 0, false, "object" )
 		else shaderTable.skyboxBottom = dxCreateShader ( "fx/shader_dynamicSky2bottom.fx", 3, 0, false, "object" ) end
 	shaderTable.clear = dxCreateShader ( "fx/shader_clear.fx", 3, 0, false, "world" )
-	textureTable.cloud = dxCreateTexture ( "tex/cloud2.dds", "dxt5" )
+	textureTable.cloud = dxCreateTexture ( "tex/cloud_genshin.dds", "dxt5" )
 	textureTable.normal = dxCreateTexture ( "tex/clouds_normal.jpg", "dxt5" ) 
 	textureTable.skybox = dxCreateTexture ( "tex/skybox.dds", "dxt5" )
 	moonPhase = getCurrentMoonPhase()
@@ -71,10 +70,8 @@ function startDynamicSky()
 		return
 	end
 	-- cloud color (currently hard coded)
-	setSkyGradient(36,117,189,152,213,252)
-	setColorFilter (0, 0, 0, 0, 0, 0, 0, 0)
 	--resetColorFilter ()
-	dxSetShaderValue ( shaderTable.skyboxTropos, "shadowColor", {1,1,1,0})
+    dxSetShaderValue ( shaderTable.skyboxTropos, "shadowColor", {1,1,1,0})
 	dxSetShaderValue ( shaderTable.skyboxTropos, "highlightColor", {236/255,251/255,255/255,1})
 	dxSetShaderValue ( shaderTable.skyboxTropos, "edgeLightColor", {1,1,1,1})
 
@@ -121,6 +118,7 @@ function startDynamicSky()
 	tempParam[1] = getSunSize()
 	tempParam[2] = getMoonSize()
 	tempParam[3] = getCloudsEnabled()
+
 	setSunSize( 0 )
 	setMoonSize( 0 )
     setCloudsEnabled( dynamicSkySettings.enableIngameClouds )
@@ -140,6 +138,7 @@ function startDynamicSky()
 	shaderTable.isSwitched = false
 	addEventHandler ( "onClientPreRender", getRootElement (), switchShaders ) -- change shaders
 	dsEffectEnabled = true
+
 end
 
 function stopDynamicSky()
@@ -220,13 +219,16 @@ function renderTime()
 	if not dsEffectEnabled then return end
 	local ho,mi,se = getTimeHMS()
 	local timeAspect = ((( ho * 60 ) + mi ) + ( se / 60 )) / 1440
-			
+	
+	--local x,y,z = getDynamicSunVector()
+	
 	dxSetShaderValue ( shaderTable.skyboxTropos, "gRotate", math.rad(dynamicSkySettings.sunPreRotation[1]), math.rad(( timeAspect * 360 ) + 
 			dynamicSkySettings.sunPreRotation[2]), math.rad(dynamicSkySettings.sunPreRotation[3] ))
 	dxSetShaderValue ( shaderTable.skyboxStratos, "gRotate", math.rad(dynamicSkySettings.sunPreRotation[1]), math.rad(( timeAspect * 360 ) + 
 			dynamicSkySettings.sunPreRotation[2]), math.rad(dynamicSkySettings.sunPreRotation[3] ))
 	dxSetShaderValue ( shaderTable.skyboxBottom, "gRotate", math.rad(dynamicSkySettings.sunPreRotation[1]), math.rad(( timeAspect * 360 ) + 
 			dynamicSkySettings.sunPreRotation[2]), math.rad(dynamicSkySettings.sunPreRotation[3] ))
+	
 
 	dxSetShaderValue ( shaderTable.skyboxTropos, "mRotate", math.rad(dynamicSkySettings.sunPreRotation[1] + dynamicSkySettings.moonPreRotation[1]), math.rad((( moonPhase + timeAspect ) * 360) + 
 			dynamicSkySettings.sunPreRotation[2] + dynamicSkySettings.moonPreRotation[2]), math.rad(dynamicSkySettings.sunPreRotation[3] + dynamicSkySettings.moonPreRotation[3]))
@@ -296,6 +298,8 @@ function renderTime()
 	dxSetShaderValue ( shaderTable.skyboxTropos, "gAlphaMult", 1 )
 	dxSetShaderValue ( shaderTable.skyboxBottom, "gAlphaMult", 1 ) 
 	dxSetShaderValue ( shaderTable.skyboxStratos, "gAlphaMult", 1 )
+
+	renderWeather(shaderTable)
 end
 
 function getPositionFromMatrixOffset(m, x, y, z)
@@ -377,9 +381,18 @@ end
 -- exports
 ----------------------------------------------------------------
 function getDynamicSunVector()
+	--[[
 	local vecX, vecY, vecZ = eulerToVectorXY(math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[1])), math.rad(getNormalAngle(( getTimeAspect() * 360 ) + 
 	dynamicSkySettings.sunPreRotation[2])), math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[3])))
-	return vecX, vecY, vecZ
+	--]]
+	local h,m =	getTime()
+	s = m
+	sunAngle = (m + 60 * h + s/60.0) * 0.0043633231;
+	x = 0.7 + math.sin(sunAngle);
+	y = -0.7;
+	z = 0.2 - math.cos(sunAngle);
+	
+	return x, y, z
 end
 
 function getDynamicMoonVector()

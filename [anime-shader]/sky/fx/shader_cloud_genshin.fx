@@ -21,11 +21,11 @@ float gBottCloudSpread = 500;
 bool gHorizonBlending = true;
 
 //cloud color
-float4 shadowColor = float4(0.9,0.68,0.57,0);
+float4 shadowColor = float4(0.9,0.68,0.57,1);
 float4 highlightColor = float4(0.55,0.6,0.63,1);
 float4 edgeLightColor = float4(1,1,1,1);
-
-
+float edgeLightPower = 1;
+float cloudFade = 1;
 
 texture sClouds;
 texture sNormal;
@@ -165,6 +165,7 @@ PSInput VertexShaderSB(VSInput VS)
     float4x4 sView = gView; sView[3].xyz = float3(0,0,0);
     float4 mulView = mul( mulWorld, sView);
     PS.Position = mul(mulView, gProjection);
+    //PS.TexCoord1 = normalize(mul(eulerRotate(gRotate), VS.Position.xyz));
     PS.TexCoord1 = normalize(mul(eulerRotate(gRotate), VS.Position.xyz));
     PS.TexCoord2 = normalize(mul(eulerRotate(mRotate), VS.Position.xyz)) * 5;
     PS.WorldPos = mul(VS.Position, sWorld);
@@ -254,13 +255,11 @@ Pixel PixelShaderClouds(PSInput PS)
     float4 cloudColor = clouds;
     
     // r channel (shadow & highlight)
-    cloudColor = lerp(shadowColor,highlightColor,cloudColor.r);
+    cloudColor.rgb = lerp(shadowColor,highlightColor,clouds.r);
     // b channel (fade opacity)
-    float fade = 0;
-    cloudColor = lerp(0,cloudColor,pow(clouds.b,fade));
+    cloudColor.rgb = lerp(0,cloudColor,pow(clouds.b,cloudFade));
     // g channel (edge light)
-    float edgeLightPower = 1;
-    cloudColor = lerp(cloudColor,edgeLightColor,pow(clouds.g,edgeLightPower));
+    cloudColor.rgb = lerp(cloudColor,edgeLightColor,pow(clouds.g,edgeLightPower));
 
     clouds = cloudColor;
     // pass final color
@@ -273,6 +272,7 @@ Pixel PixelShaderClouds(PSInput PS)
     float3 TexCoord1 = normalize(PS.TexCoord1);
     float3 TexCoord2 = normalize(PS.TexCoord2);
 	
+    
     float SunDotNormal = dot( normalize( float3(0,0,-1) + cloudNormal * 0.3 ), TexCoord1);
     float SunLightNormal = saturate(pow( max( 0.0001, SunDotNormal), 100 ));
     float MoonDotNormal = dot( normalize( float3(0,0,-1) + cloudNormal * 0.1), TexCoord2);
@@ -281,17 +281,18 @@ Pixel PixelShaderClouds(PSInput PS)
     normalLight *= fadeDot;
 	
     float4 outPut = clouds;
-    
-    outPut.rgb *= saturate(0.5 + pow(gDayTime, 1.2));
+   
+     
+    //outPut.rgb *= saturate(0.5 + pow(gDayTime, 1.2));
     outPut.rgb *= saturate(0.5 + gFogColor.rgb/2);
     outPut.rgb += clouds.rgb * normalLight;
     outPut.a *= 1.5;
     outPut.a = saturate(outPut.a);
 
-
+  /*
     fadeDot = lerp(1, fadeDot, PS.NightFade.z);	
     
-    /*
+    
     float topDot = PS.LimitDot.y;
     outPut *= fadeDot * topDot;
     outPut.a *= fadeDot;
@@ -312,17 +313,20 @@ technique DynamicSky2tropos
 {
     pass P0
     {
+      
         SrcBlend = SrcAlpha; 
         DestBlend = One;
         AlphaRef = 1;
         AlphaBlendEnable = true;
         FogEnable = false;
         ZWriteEnable = false;
+       
         VertexShader = compile vs_2_0 VertexShaderSB();
         PixelShader = compile ps_2_0 PixelShaderDots();
     }
     pass P1
     {
+  
         SrcBlend = SrcAlpha;
         DestBlend = InvSrcAlpha;
         AlphaRef = 1;
@@ -330,7 +334,8 @@ technique DynamicSky2tropos
         AlphaBlendEnable = true;
         DepthBias = -0.000005;
         ZWriteEnable = false;
-        VertexShader = compile vs_2_0 VertexShaderSB();
-        PixelShader = compile ps_2_0 PixelShaderClouds();
+  
+        VertexShader = compile vs_3_0 VertexShaderSB();
+        PixelShader = compile ps_3_0 PixelShaderClouds();
     }
 }
