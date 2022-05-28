@@ -72,7 +72,7 @@ function renderWeather(shaderTable)
     
     --local interp = time % 1
     local interp = (time - h) / (next - h)
-    print(interp)
+    --print(interp)
 
     -- start liner interpration
     -- sky gradient

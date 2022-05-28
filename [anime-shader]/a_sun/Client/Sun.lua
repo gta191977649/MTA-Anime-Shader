@@ -1,11 +1,11 @@
-
 Sun = {}
+
 
 function Sun:constructor(parent)
 	self.parent = parent
 	self.player = getLocalPlayer()
 	
-	self.isDebugMode = "false"
+	self.isDebugMode = "true"
 	
 	self.x = 0
 	self.y = 0
@@ -37,43 +37,13 @@ function Sun:toggleTestMode()
 end
 
 function Sun:update()
+	local vecLength = 1500
+	local vx,vy,vz = getDynamicSunVector()
 	self.px, self.py, self.pz = getElementPosition(self.player)
-	self.x, self.y, self.z = getAttachedPosition(self.px, self.py, self.pz, self.rx, self.ry, self.rz + self.rzOffset, 1500, 0, self.height + self.heightCurrentOffset)
-	
+	--self.x, self.y, self.z = getAttachedPosition(self.px, self.py, self.pz, self.rx, self.ry, self.rz + self.rzOffset, 1500, 0, self.height + self.heightCurrentOffset)
+	self.x, self.y, self.z =self.px-vx*vecLength, self.py-vy*vecLength,self.pz-vz*vecLength
 	if (self.isDebugMode == "true") then
-		self.rzOffset = self.rzOffset + 0.05
-		
-		if (self.rzOffset > 360) then
-			self.rzOffset = 0
-		end
-		
-		if (self.heightOffsetDirection == "up") then
-			if (self.heightCurrentOffset < self.heightMaxOffset) then
-				self.heightCurrentOffset = self.heightCurrentOffset + 0.1
-			else
-				self.heightOffsetDirection = "down"
-			end
-		elseif (self.heightOffsetDirection == "down") then
-			if (self.heightCurrentOffset > self.heightMinOffset) then
-				self.heightCurrentOffset = self.heightCurrentOffset - 0.1
-			else
-				self.heightOffsetDirection = "up"
-			end		
-		end
-		
-		dxDrawLine3D(self.px, self.py, self.pz, self.x, self.y, self.z, tocolor(255, 255, 0, 255), 4, true)
-	else
-		--self.rzOffset = 160
-		--self.height = -100
-	
-
-
-		local h, _ = getTime()
-		self.rzOffset = time2RzOff(h)
-		self.height = time2Height(h)
-		
-		--self.x, self.y, self.z = 1500,1,1000
-		--print(self.rzOffset)
+		dxDrawLine3D(self.px, self.py, self.pz, self.px-vx*vecLength, self.py-vy*vecLength,self.pz-vz*vecLength, tocolor(255, 255, 0, 255), 4, true)
 	end
 	
 	--dxDrawLine3D(self.px, self.py, self.pz, self.x, self.y, self.z, tocolor(255, 255, 0, 255), 4, true)

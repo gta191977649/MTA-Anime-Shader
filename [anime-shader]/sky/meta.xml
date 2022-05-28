@@ -43,6 +43,7 @@
 	<file src="dff/skybox_model.dff" type="client" />
 	<file src="tex/skybox_model.txd" type="client" />
 	<export function="getDynamicSunVector" type="client" />
+	<export function="getDynamicSunAngle" type="client" />
 	<export function="getDynamicMoonVector" type="client" />
 	<export function="getMoonPhaseValue" type="client" />
 	<export function="isDynamicSkyEnabled" type="client" />

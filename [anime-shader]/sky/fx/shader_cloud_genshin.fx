@@ -225,8 +225,8 @@ Pixel PixelShaderDots(PSInput PS)
 	
     float3 TexCoord1 = normalize(PS.TexCoord1);
     float SunDot = dot(float3(0,0,-1), TexCoord1);	
-    float SunLight = pow(max(0.0001, SunDot), 60);
-    float SunAura = pow(max(0.0001, SunDot), 100);
+    float SunLight = pow(max(0.0001, SunDot), 500);
+    float SunAura = pow(max(0.0001, SunDot), 900);
     float3 sunCombine = saturate(0.7 * SunLight * gSunColor[0] + 0.4 * SunAura * gSunColor[1]);
 
     nightSky.rgb = saturate(nightSky.rgb);

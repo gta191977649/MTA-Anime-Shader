@@ -1,0 +1,12 @@
+<meta>
+	<info name ="water" description="OSWS (Open Source Water Shader) for MTA" version="1.0" type="script" author="Einheit-101"/>
+	<min_mta_version client="1.5" server="1.5"/>
+	<script src="client.lua" type="client"/>
+	<file src="mta-helper.fx" type="client"/>
+	<file src="water.fx" type="client"/>
+	<file src="effectBias.fx" type="client"/>
+	<file src="water_low.fx" type="client"/>
+	<file src="water/normal.png" type="client"/>
+	<file src="water/water.jpg" type="client"/>
+	<file src="water/foam.png" type="client"/>
+</meta>

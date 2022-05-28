@@ -172,9 +172,9 @@ function stopDynamicSky()
 	modelTable.txd = nil
 	modelTable.dff = nil
 	dsEffectEnabled = false
-	setSunSize( tempParam[1] )
-	setMoonSize( tempParam[2] )
-	setCloudsEnabled( tempParam[3] )	
+	--setSunSize( tempParam[1] )
+	--setMoonSize( tempParam[2] )
+	--setCloudsEnabled( tempParam[3] )	
 end
 
 function switchShaders()
@@ -221,6 +221,11 @@ function renderTime()
 	local timeAspect = ((( ho * 60 ) + mi ) + ( se / 60 )) / 1440
 	
 	--local x,y,z = getDynamicSunVector()
+	--local a = getSunAngle()
+	--dxSetShaderValue ( shaderTable.skyboxTropos, "gRotate", x,y,z)
+
+	--print(a)
+	
 	
 	dxSetShaderValue ( shaderTable.skyboxTropos, "gRotate", math.rad(dynamicSkySettings.sunPreRotation[1]), math.rad(( timeAspect * 360 ) + 
 			dynamicSkySettings.sunPreRotation[2]), math.rad(dynamicSkySettings.sunPreRotation[3] ))
@@ -380,19 +385,35 @@ end
 ----------------------------------------------------------------
 -- exports
 ----------------------------------------------------------------
-function getDynamicSunVector()
+function getSunAngle()
 	--[[
 	local vecX, vecY, vecZ = eulerToVectorXY(math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[1])), math.rad(getNormalAngle(( getTimeAspect() * 360 ) + 
 	dynamicSkySettings.sunPreRotation[2])), math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[3])))
 	--]]
+	local h,m =	getTime()
+	sunAngle = (m + 60 * h + s/60.0) * 0.0043633231;
+	
+	return sunAngle
+end
+function getDynamicSunVector()
+	--[[
+	local vecX, vecY, vecZ = eulerToVectorXY(math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[1])), math.rad(getNormalAngle(( getTimeAspect() * 360 ) + 
+	dynamicSkySettings.sunPreRotation[2])), math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[3])))
+	
 	local h,m =	getTime()
 	s = m
 	sunAngle = (m + 60 * h + s/60.0) * 0.0043633231;
 	x = 0.7 + math.sin(sunAngle);
 	y = -0.7;
 	z = 0.2 - math.cos(sunAngle);
-	
-	return x, y, z
+	--]]
+	local vecX, vecY, vecZ = eulerToVectorXY(math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[1])), math.rad(getNormalAngle(( getTimeAspect() * 360 ) + 
+	dynamicSkySettings.sunPreRotation[2])), math.rad(getNormalAngle(dynamicSkySettings.sunPreRotation[3])))
+	return vecX, vecY, vecZ
+end
+function getDynamicSunAngle()
+	return getNormalAngle(dynamicSkySettings.sunPreRotation[1]), getNormalAngle(( getTimeAspect() * 360 ) + 
+	dynamicSkySettings.sunPreRotation[2]), getNormalAngle(dynamicSkySettings.sunPreRotation[3])
 end
 
 function getDynamicMoonVector()
