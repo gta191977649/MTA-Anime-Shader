@@ -2,7 +2,7 @@
 #include "mta-helper.fx"
 int gCapsMaxAnisotropy < string deviceCaps="MaxAnisotropy"; >;
 
-static const int rays = 6;
+static const int rays = 5;
 float deepness = 0.5;
 float2 sPixelSize = float2(0,0);
 texture screenInput;
@@ -10,7 +10,7 @@ texture normalTexture;
 texture foamTexture;
 texture gDepthBuffer : DEPTHBUFFER;
 float flowSpeed = 0.5;
-float reflectionSharpness = 0.0;
+float reflectionSharpness = 0.1;
 float reflectionStrength = 0.0;
 float refractionStrength = 0.0;
 float causticSpeed = 0.3;
@@ -29,9 +29,6 @@ float waterShiningPower = 1;
 sampler2D screenSampler = sampler_state
 {
 	Texture = <screenInput>;
-	MinFilter = Linear;
-	MagFilter = Linear;
-	MipFilter = Linear;
 	AddressU = Mirror;
 	AddressV = Mirror;
 };
@@ -44,6 +41,7 @@ sampler2D foamSampler = sampler_state
 	MipFilter = Linear;
 	AddressU = Wrap;
 	AddressV = Wrap;
+
 };
 
 sampler NormalSampler = sampler_state
@@ -59,11 +57,7 @@ sampler NormalSampler = sampler_state
 sampler SamplerDepth = sampler_state
 {
 	Texture = (gDepthBuffer);
-	MinFilter = Point;
-	MagFilter = Point;
-	MipFilter = None;
-	AddressU = Clamp;
-	AddressV = Clamp;
+
 };
 
 //--------------------------------------------------------------------------------------
@@ -121,6 +115,41 @@ float3 GetPosition(float2 UV, float depth)
 
 	return position.xyz;
 }
+float2 rand(float2 st, int seed)
+{
+    float2 s = float2(dot(st, float2(127.1, 311.7)) + seed, dot(st, float2(269.5, 183.3)) + seed);
+    return -1 + 2 * frac(sin(s) * 43758.5453123);
+}
+    
+float noise(float2 st, int seed)
+{   
+    st.y += gTime;
+
+    float2 p = floor(st);
+    float2 f = frac(st);
+
+    float w00 = dot(rand(p, seed), f);
+    float w10 = dot(rand(p + float2(1, 0), seed), f - float2(1, 0));
+    float w01 = dot(rand(p + float2(0, 1), seed), f - float2(0, 1));
+    float w11 = dot(rand(p + float2(1, 1), seed), f - float2(1, 1));
+    
+    float2 u = f * f * (3 - 2 * f);
+
+    return lerp(lerp(w00, w10, u.x), lerp(w01, w11, u.x), u.y);
+}
+
+float3 swell( float3 pos,float anisotropy){
+    float3 normal;
+    float height = noise(pos.xy,0);
+    height *= anisotropy ;//使距离地平线近的区域的海浪高度降低
+    normal = normalize(
+        cross (
+            float3(0,ddy(height),1),
+            float3(1,ddx(height),0)
+        )//两片元间高度差值得到梯度
+    );
+    return normal;
+}
 
 struct VertexInputType
 {
@@ -170,7 +199,9 @@ PixelInputType WaterVertexShader(VertexInputType input)
 	return output;
 }
 
-
+float map(float value, float min1, float max1, float min2, float max2) {
+  return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Pixel Shader
 ////////////////////////////////////////////////////////////////////////////////
@@ -183,18 +214,18 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	float2 txcoord = (input.vposition.xy / input.vposition.w) * float2(0.5, -0.5) + 0.5;
 	txcoord += 0.5 * sPixelSize;
 	
-	//Add shore foam
-	float scaling = 0.005;
-	float speed = 4;
-	float2 foamCoords = input.textureCoords*2;// Tile the foam texture to make it look more detailed
-	foamCoords.x += sin ((foamCoords.x + foamCoords.y) * 22 + gTime * speed) * scaling;
-	foamCoords.x += cos (foamCoords.y * 22 + gTime * speed) * scaling;
-	float4 foamColor = tex2D(foamSampler, foamCoords);
+
 	
 	// Sample the normal from the normal map texture.
 	float2 movingTextureCoords = input.textureCoords.xy;
 	movingTextureCoords.y = movingTextureCoords.y + timer;
-	float3 normalMap = tex2D(NormalSampler, movingTextureCoords);
+
+	//float a = map(dist,0, 500, 0, 1);
+	float3 v = input.worldPosition - gCameraPosition;
+	float anisotropy = 1/ddy(length(v.xy));
+
+	float3 normalMap = swell(-input.worldPosition,anisotropy );
+	//float3 normalMap = tex2D(NormalSampler, movingTextureCoords);
 	
 	// Expand the range of the normal from (0,1) to (-1,+1).
 	//normalMap = (normalMap * 2.0f) - 1.0f;
@@ -203,6 +234,20 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	refractTexCoord.x = input.refractionPosition.x / input.refractionPosition.w / 2.0 + 0.5;
 	refractTexCoord.y = -input.refractionPosition.y / input.refractionPosition.w / 2.0 + 0.5;
 
+	//camera depth
+	float cameraDepth = max(0.915, FetchDepthBufferValue(txcoord));// clamp cameraDepth to at least 0.915 to avoid flickering issues close to the camera
+	float dp = 1.0 / (1 - Depth);
+	float planardepth = 1.0 / (1 - cameraDepth);
+	float waterDepth = min(20, planardepth - dp);// Calculates a value between 0 and 10
+	
+	//generate base color
+	const float4 phases = float4(0.28, 0.50, 0.07, 0);//周期
+    const float4 amplitudes = float4(4.02, 0.34, 0.65, 0);//振幅
+    const float4 frequencies = float4(0.00, 0.48, 0.08, 0);//频率
+    const float4 offsets = float4(0.00, 0.16, 0.00, 0);//相位
+	float diffZ = (planardepth - dp)/30;
+    //按照距离海滩远近叠加渐变色
+    float4 cos_grad = cosine_gradient(saturate(1-diffZ), phases, amplitudes, frequencies, offsets);	
 
 
 	float4 reflectionColor = waterColor;
@@ -251,20 +296,26 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 		
 		
 		// create corona-like mask around reflection edges to obscure artifacts
+		
 		float dy = 1/2 - (nuv.y - 0.5);
 		float dist = pow(dy * dy, 0.5);
 		float distFromCenter = 0.5 - dist;
 		int fadingStrength = 5;
 		float mask = 1 - saturate(distFromCenter * fadingStrength);
+		
 
 		float fresnel = saturate(1.5 * dot(viewDir, -input.worldNormal));
 		reflectionColor = lerp(tex2D(screenSampler, nuv), waterColor, mask);	// lerp between new reflection and water color with the corona mask
-		reflectionColor = lerp(reflectionColor, waterColor, fresnel);			// lerp between reflection and fresnel value to make the reflection slowly lose color
-		reflectionColor = lerp(reflectionColor, waterColor, err);				// lerp between reflection and water color to filter out reflection artifacts
+		reflectionColor = lerp(reflectionColor, cos_grad, fresnel);			// lerp between reflection and fresnel value to make the reflection slowly lose color
+		// lerp between reflection and water color to filter out reflection artifacts
+		//reflectionColor = lerp(reflectionColor, cos_grad, err);
 		reflectionColor = lerp(waterColor, reflectionColor, reflectionStrength);// lerp between water color and reflection color according to the reflection strength setting
+		//reflectionColor = float4(1,1,1,1);
 	}
 
 	//Create water caustics, originally made by genius "Dave Hoskins" @ https://www.shadertoy.com/view/MdlXz8
+
+	/*
 	float2 p = mod(movingTextureCoords * 6.28318530718, 6.28318530718) - 350;
 	float2 i = p;
 	float c = 0.3 * causticIterations;
@@ -276,12 +327,14 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 		c += 1.0/length(float2(p.x / (sin(i.x+t)/inten), p.y / (cos(i.y+t)/inten)));
 	}
 	c = 1.17 - pow(c / causticIterations, 1.4);
+	
 	float colour = saturate(pow(abs(c), 8.0) * causticStrength + 0.1);
-
+	*/
 	
 	
-	float4 refractionColor = tex2D(screenSampler, refractTexCoord + normalMap.xy) * refractionStrength;
-
+	float4 refractionColor = tex2D(screenSampler,refractTexCoord + normalMap.xy) * refractionStrength;
+	
+	
 	// TO DO: Add refraction of stuff below water surface, but i dont think that this is possible
 	
 
@@ -294,34 +347,40 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	specularColor = saturate(specularColor + pow(saturate(dot(lightRange, input.worldNormal)), specularSize * 3)) * 0.5;
 	specularColor = saturate(specularColor + specularAcceleration + float3(specularBase, specularBase, specularBase));
 
-	float cameraDepth = max(0.915, FetchDepthBufferValue(txcoord));// clamp cameraDepth to at least 0.915 to avoid flickering issues close to the camera
-	Depth = 1.0 / (1 - Depth);
-	float planardepth = 1.0 / (1 - cameraDepth);
-	float waterDepth = min(20, planardepth - Depth);// Calculates a value between 0 and 10
-	
-	const float4 phases = float4(0.28, 0.50, 0.07, 0);//周期
-    const float4 amplitudes = float4(4.02, 0.34, 0.65, 0);//振幅
-    const float4 frequencies = float4(0.00, 0.48, 0.08, 0);//频率
-    const float4 offsets = float4(0.00, 0.16, 0.00, 0);//相位
-    //按照距离海滩远近叠加渐变色
-    float4 cos_grad = cosine_gradient(saturate(1-(planardepth - Depth)/30 * colour), phases, amplitudes, frequencies, offsets);
-	cos_grad = lerp(0,cos_grad,colour);
-	
-//TO DO: waterDepth is not really the planar water depth (I think), thats why the shore foam depends on view angle... I cant find a proper solution
 
-	foamColor.a =  cos_grad.a;
+
+	//TO DO: waterDepth is not really the planar water depth (I think), thats why the shore foam depends on view angle... I cant find a proper solution
 	
-	float4 causticColor = cos_grad ;
+
+	//Add shore foam
+	float scaling = 15;
+	float speed = 0.01;
+	float2 foamCoords = input.textureCoords;// Tile the foam texture to make it look more detailed
+	//foamCoords.x += sin ((foamCoords.x + foamCoords.y) * 22 + gTime * speed) * scaling;
+	//foamCoords.x += cos (foamCoords.y * 22 + gTime * speed) * scaling;
+	// tiling
+	foamCoords.x = foamCoords.x/100 ;
+	foamCoords.y = foamCoords.y/20;
+
+	foamCoords.y -= gTime*speed;
+	float4 foamColor = tex2D(foamSampler, foamCoords * scaling);
 	
+	foamColor = step(0.5,foamColor);
+	foamColor = saturate((foamColor.r  +foamColor.g ));	
 	// Combine water color, refraction, foam and caustics to the finalColor.
-	float4 finalColor = (refractionColor + waterColor) * causticColor * reflectionColor ;
-	finalColor.a = waterDepth * deepness * waterColor.a;
-	//finalColor.a = saturate((planardepth - Depth)/30) ;
-	finalColor = lerp(foamColor, finalColor, smoothstep(0, 1, waterDepth));
-	finalColor.rgb *= saturate(0.15 + dayTime);
+
+	float4 finalColor = (refractionColor + cos_grad) * reflectionColor ;
+	float alpha = waterDepth * deepness * waterColor.a;
+	//float4 finalColor =  reflectionColor * cos_grad  ;
+
 	finalColor.rgb = saturate(finalColor.rgb + specularColor * waterShiningPower);
+	finalColor.rgb = lerp(finalColor.rgb,reflectionColor.rgb,smoothstep(0.1, 1, finalColor.a));
+	
+	finalColor.a = alpha;
+	finalColor = lerp(foamColor * saturate(0.5 + dayTime), finalColor, smoothstep(0, 10, waterDepth));
+	//finalColor.rgb *= saturate(0.15 + dayTime);
 	// test color code
-	//finalColor = cos_grad;
+	//finalColor = reflectionColor;
 	return float4(MTAApplyFog(finalColor.rgb, input.worldPosition), finalColor.a);
 }
 

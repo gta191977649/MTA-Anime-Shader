@@ -8,7 +8,9 @@
     <file src="fx/world_ref.fx" type="client"/>
     <file src="fx/water_ref.fx" type="client"/>
     <file src="fx/mta-helper.fx" type="client"/>
+    
     <file src="images/cube_env.dds" type="client"/>
+    <file src="images/foam_genshin.png" type="client"/>
     <file src="images/water.dds" type="client"/>
     <file src="images/water3.dds" type="client"/>
     <file src="images/wavemap.png" type="client"/>

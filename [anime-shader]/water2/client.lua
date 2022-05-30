@@ -1,21 +1,21 @@
 --##### SETTINGS #####--
 
 local moonIlluminance = 0.1			-- This value determines how strong the moon should illuminate the water at night
-local specularSize = 9.0			-- Lower value = bigger specular lighting from sun (dynamic sky supported)
-local flowSpeed = 0.2				-- Movement speed of the water
+local specularSize = 5.0			-- Lower value = bigger specular lighting from sun (dynamic sky supported)
+local flowSpeed = 0.5				-- Movement speed of the water
 local reflectionSharpness = 0.1	-- lower value = sharper reflection
-local reflectionStrength = 0.3		-- How much reflection?
-local refractionStrength = 0.1		-- Strength of the refraction (Only surface refraction, stuff inside water does not get refracted currently)
+local reflectionStrength = 1		-- How much reflection?
+local refractionStrength = 0.15		-- Strength of the refraction (Only surface refraction, stuff inside water does not get refracted currently)
 local causticStrength = 2			-- Surface caustic wave effect strength
 local causticSpeed = 0.5			-- Caustic movement speed
 local causticIterations = 50		-- Caustic detail
-local shoreFadeStrength = 0.035	-- lower value = stronger shore fading
+local shoreFadeStrength = 0.03	-- lower value = stronger shore fading
 --#######################
 
 local width, height = guiGetScreenSize()
-local ScreenInput = dxCreateScreenSource(width/6, height/6)-- Decrease this divisor to increase reflection quality. But anything higher than 1/6 is a waste of memory
+local ScreenInput = dxCreateScreenSource(width/2, height/2)-- Decrease this divisor to increase reflection quality. But anything higher than 1/6 is a waste of memory
 local waterNormal = dxCreateTexture("water/water.jpg")
-local waterFoam = dxCreateTexture("water/foam.png", "dxt1")
+local waterFoam = dxCreateTexture("water/foam_genshin.png","dxt5")
 local waterShader
 local currentMinute, minuteStartTickCount, minuteEndTickCount = 0, 0, 0
 
@@ -88,13 +88,13 @@ if waterShader and ScreenInput then
 	local shiningPower = getShiningPower(ho, mi, se)
 	local sunX, sunY, sunZ = 0, 0, 0
 	local moonX, moonY, moonZ = 0, 0, 0
-	local skyResource = getResourceFromName("shader_dynamic_sky")
-	if skyResource and getResourceState(skyResource) == "running" and exports.shader_dynamic_sky:isDynamicSkyEnabled() then-- try to get sun position from dynamic sky
+	local skyResource = getResourceFromName("sky")
+	if skyResource and getResourceState(skyResource) == "running" and exports.sky:isDynamicSkyEnabled() then-- try to get sun position from dynamic sky
 		local px, py, pz = getElementPosition(localPlayer)
-		local x, y, z = exports.shader_dynamic_sky:getDynamicSunVector()
+		local x, y, z = exports.sky:getDynamicSunVector()
 		local dist = getFarClipDistance()*0.8
 		sunX, sunY, sunZ = px - x*dist, py - y*dist, pz - z*dist
-		x, y, z = exports.shader_dynamic_sky:getDynamicMoonVector()
+		x, y, z = exports.sky:getDynamicMoonVector()
 		moonX, moonY, moonZ = px - x*dist, py - y*dist, pz - z*dist
 	else
 		shiningPower = 0-- if no sun position is available, disable specular lighting
@@ -112,7 +112,7 @@ if waterShader and ScreenInput then
 	dxSetShaderValue(waterShader, "dayTime", getDiffuse(ho, mi, se))
 	dxSetShaderValue(waterShader, "waterShiningPower", shiningPower * nightModifier)
 	--dxSetShaderValue(waterShader, "waterColor", {wr/255, wg/255, wb/255, waterAlpha/255})
-	dxSetShaderValue(waterShader, "sunColor", {cr/600, cg/600, cb/600})-- reduce sun color intensity because it looks garbage otherwise
+	dxSetShaderValue(waterShader, "sunColor", {1, 1, 1})-- reduce sun color intensity because it looks garbage otherwise
 	dxSetShaderValue(waterShader, "sunPos", {sunX, sunY, sunZ})
 end
 end

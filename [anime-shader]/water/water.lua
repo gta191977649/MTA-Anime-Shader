@@ -11,17 +11,7 @@ addEventHandler( "onClientHUDRender", root, function()
     dxSetShaderValue( waterShader, "sDepthTexture",  depthRT )
     -- Update screen
     dxUpdateScreenSource( screenSource,true )
-    dxSetShaderValue(waterShader,"sScreenSource",screenSource)
-end)
-
-addEventHandler("onClientPreRender",root,function() 
-    if not isElement(waterShader) then return end
-    dxSetRenderTarget( normalRT, true )
-    dxSetRenderTarget()
-    dxSetRenderTarget( depthRT, true )
-    dxDrawRectangle( 0, 0, scx, scy )
-    dxSetRenderTarget()
-    
+    dxSetShaderValue(waterShader,"screenInput",screenSource)
 end)
 
 function enableWater() 
@@ -31,6 +21,7 @@ function enableWater()
     waterShader = dxCreateShader("fx/water.fx")
     engineApplyShaderToWorldTexture( waterShader, "waterclear256" )
     print("OK")
+    setColorFilter (0, 0, 0, 0, 0, 0, 0, 0)
 end
 
 enableWater() 

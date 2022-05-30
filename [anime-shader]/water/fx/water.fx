@@ -4,7 +4,19 @@
 #include "mta-helper.fx"
 //-- These two are set by MTA
 texture gDepthBuffer : DEPTHBUFFER;
+texture screenInput;
 matrix gProjectionMainScene : PROJECTION_MAIN_SCENE;
+
+sampler2D ScreenSampler = sampler_state
+{
+	Texture = <screenInput>;
+	MinFilter = Linear;
+	MagFilter = Linear;
+	MipFilter = Linear;
+	AddressU = Mirror;
+	AddressV = Mirror;
+};
+
 
 sampler SamplerDepth = sampler_state
 {
@@ -16,17 +28,21 @@ sampler SamplerDepth = sampler_state
 
 struct VSInput
 {
-    float3 Position : POSITION;
+    float4 Position : POSITION;
     float4 Diffuse  : COLOR0;
     float3 TexCoord : TEXCOORD0;
+    float3 Normal : NORMAL0;
 };
 struct PSInput
 {
-    float4 Position : POSITION0;
+    float4 Position : POSITION;
     float4 Diffuse  : COLOR0;
     float3 TexCoord : TEXCOORD0;
     float4 ScreenPos : TEXCOORD1;
+    float4 WorldPosition : TEXCOORD2;
     float DistFade : TEXCOORD3;
+    float4 ViewPosition: TEXCOORD4;
+    float3 WorldNormal : TEXCOORD5;
 };
 
 float fetchDepthBufferValue( float2 uv )
@@ -40,7 +56,11 @@ float fetchDepthBufferValue( float2 uv )
     return texel.r;
 #endif
 }
-
+float4 blendSeaColor(float4 col1,float4 col2)
+{
+    float4 col = min(1,1.5-col2.a)*col1+col2.a*col2;
+    return col;
+}
 float linearize(float posZ)
 {
     return gProjectionMainScene[3][2] / (posZ - gProjectionMainScene[2][2]);
@@ -65,7 +85,7 @@ float2 rand(float2 st, int seed)
 }
     
 float noise(float2 st, int seed)
-{
+{   
     st.y += gTime;
 
     float2 p = floor(st);
@@ -81,15 +101,15 @@ float noise(float2 st, int seed)
     return lerp(lerp(w00, w10, u.x), lerp(w01, w11, u.x), u.y);
 }
 
-float3 swell(float3 normal , float3 pos , float anisotropy)
-{
-    float height = noise(pos.xz * 0.1,0);
-    height *= anisotropy ;
+float3 swell( float3 pos,float anisotropy){
+    float3 normal;
+    float height = noise(pos.xy,0);
+    height *= anisotropy ;//使距离地平线近的区域的海浪高度降低
     normal = normalize(
-        cross ( 
+        cross (
             float3(0,ddy(height),1),
             float3(1,ddx(height),0)
-        )
+        )//两片元间高度差值得到梯度
     );
     return normal;
 }
@@ -101,60 +121,80 @@ PSInput VertexShaderFunction(VSInput VS)
     PSInput PS = (PSInput)0;
 
     //-- Calculate screen pos of vertex
-    PS.Position = mul(float4(VS.Position.xyz,1), gWorldViewProjection);
+    /*
+    matrix projection = mul(gWorldViewProjection, gWorld);
+	projection = mul(gWorld, projection);
+    */
 
-    //-- Pass through tex coord
-    //PS.TexCoord = VS.TexCoord;
-    // compute the eye vector 
-    float4 pPos = mul(VS.Position, gWorldViewProjection); 
-	PS.TexCoord.x = (0.5 * (pPos.w + pPos.x));
-	PS.TexCoord.y = (0.5 * (pPos.w - pPos.y));
-	PS.TexCoord.z = pPos.w;
+    PS.WorldPosition = mul(VS.Position, gWorld);
+	float4 viewPos = mul(PS.WorldPosition , gView);
+
+    PS.Position = mul(viewPos, gProjection);
 
 
-    //-- Calculate GTA lighting for buildings
+	PS.TexCoord = VS.TexCoord;
+
     PS.Diffuse = MTACalcGTABuildingDiffuse( VS.Diffuse );
-    //--
-    //-- NOTE: The above line is for GTA buildings.
-    //-- If you are replacing a vehicle texture, do this instead:
-    //--
-    //--      // Calculate GTA lighting for vehicles
-    //--      float3 WorldNormal = MTACalcWorldNormal( VS.Normal );
-    //--      PS.Diffuse = MTACalcGTAVehicleDiffuse( WorldNormal, VS.Diffuse );
-    PS.ScreenPos = MTACalcScreenPosition(VS.Position);
 
-    float DistanceFromCamera = MTACalcCameraDistance( gCameraPosition,MTACalcWorldPosition( VS.Position.xyz ) );
+    PS.ScreenPos = MTACalcScreenPosition(VS.Position.xyz);
+
+
+    float DistanceFromCamera = MTACalcCameraDistance( gCameraPosition,PS.WorldPosition );
     PS.DistFade = DistanceFromCamera;
+    //PS.DistFade = MTAUnlerp ( 500, 0, DistanceFromCamera );
+
+
+    PS.ViewPosition = mul(VS.Position, gWorldViewProjection);
+    PS.WorldNormal = MTACalcWorldNormal(VS.Normal);
     return PS;
 }
 
 
-
 float4 PixelShaderFunction(PSInput PS) : COLOR0
 {
-    // Get Screen space normals
-    //float4 normalInput = tex2D(NormalSampler,PS.TexCoord.xy);
-    
-    //float sceneZ = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE_PROJ(_CameraDepthTexture, UNITY_PROJ_COORD(i.screenPos)));
-    float gDepthFactor =0.03f;
+    float4 col = float4(1,1,1,1);
 
-    float3 projcoord = float3((PS.TexCoord.xy / PS.TexCoord.z),0) ;
-    float bufferValue= linearize(fetchDepthBufferValue(PS.TexCoord))*gDepthFactor;
-    
-    float sceneZ = bufferValue;
-    float partZ = PS.ScreenPos.z;
-    float diffZ = saturate( (sceneZ - partZ)/5.0f);//片元深度与场景深度的差值
     const float4 phases = float4(0.28, 0.50, 0.07, 0);//周期
     const float4 amplitudes = float4(4.02, 0.34, 0.65, 0);//振幅
     const float4 frequencies = float4(0.00, 0.48, 0.08, 0);//频率
     const float4 offsets = float4(0.00, 0.16, 0.00, 0);//相位
-    //按照距离海滩远近叠加渐变色
-    float4 cos_grad = cosine_gradient(saturate(1.5-bufferValue), phases, amplitudes, frequencies, offsets);
-    cos_grad = clamp(cos_grad, 0, 1);
+    //Water Depth
+    float depth = PS.ViewPosition.z / PS.ViewPosition.w;
+    float2 txcoord = (PS.ViewPosition.xy / PS.ViewPosition.w) * float2(0.5, -0.5) + 0.5;
+    float cameraDepth = max(0.915, fetchDepthBufferValue(txcoord));
+    depth = 1.0 / (1 - depth);
+    float planardepth = 1.0 / (1 - cameraDepth);
+	float waterDepth = min(20, planardepth - depth);
+    //Generate Base Color
+    float diffZ = (planardepth - depth)/30;
+    float4 waterBaseColor = cosine_gradient(saturate(1-diffZ), phases, amplitudes, frequencies, offsets);
+
+    col = waterBaseColor;
+    //Generate Wave Nosie Normal
+    float3 worldViewDir = normalize(gCameraPosition.xyz-PS.WorldPosition.xyz);
+    //通过临近像素点间摄像机到片元位置差值来计算哪里是接近地平线的部分
+    float3 v = PS.WorldPosition.xyz - gCameraPosition;
+    float anisotropy = saturate(1/ddy(length(v.xz))  );
+    
+    float3 swelledNormal = swell( PS.WorldPosition.xyz,50);
+
+    //Generate Reflection ..
+    //float screenColor = tex2D(ScreenSampler,PS.TexCoord);
+    //nuv = nuv + normalMap.xy
+    float3 reflDir = reflect(-worldViewDir, swelledNormal);
+    float4 reflectionColor = float4(1,1,1,1);
+    
 
 
-    PS.Diffuse = cos_grad;
-    return PS.Diffuse;
+    //Do Fresnel
+    float vReflect =  pow( 1-dot(worldViewDir,swelledNormal),5);
+    vReflect = saturate(vReflect) ;
+
+    col = lerp(col , reflectionColor , vReflect) ;
+    col.a = saturate(diffZ);
+
+    //col.rgb = swelledNormal;
+    return col;
 }
 
 
@@ -165,7 +205,9 @@ technique tec
 {
     pass P0
     {
+  
+        SrcBlend = SRCALPHA; 
         VertexShader = compile vs_2_0 VertexShaderFunction();
-        PixelShader = compile ps_2_0 PixelShaderFunction();
+        PixelShader = compile ps_3_0 PixelShaderFunction();
     }
 }

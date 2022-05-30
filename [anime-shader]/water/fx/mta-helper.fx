@@ -391,3 +391,23 @@ float4x4 inverseMatrix(float4x4 input)
      #undef minor
      return transpose(cofactors) / determinant(input);
 }
+
+
+//------------------------------------------------------------------------------------------
+// MTAApplyFog
+//------------------------------------------------------------------------------------------
+int gFogEnable                     < string renderState="FOGENABLE"; >;
+float4 gFogColor                   < string renderState="FOGCOLOR"; >;
+float gFogStart                    < string renderState="FOGSTART"; >;
+float gFogEnd                      < string renderState="FOGEND"; >;
+ 
+float3 MTAApplyFog( float3 texel, float3 worldPos )
+{
+    if ( !gFogEnable )
+        return texel;
+ 
+    float DistanceFromCamera = distance( gCameraPosition, worldPos );
+    float FogAmount = ( DistanceFromCamera - gFogStart )/( gFogEnd - gFogStart );
+    texel.rgb = lerp(texel.rgb, gFogColor, saturate( FogAmount ) );
+    return texel;
+}

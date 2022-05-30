@@ -9,4 +9,5 @@
 	<file src="water/normal.png" type="client"/>
 	<file src="water/water.jpg" type="client"/>
 	<file src="water/foam.png" type="client"/>
+	<file src="water/foam_genshin.png" type="client"/>
 </meta>
