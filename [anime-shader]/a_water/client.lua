@@ -1,7 +1,7 @@
 --##### SETTINGS #####--
 
 local moonIlluminance = 0.1			-- This value determines how strong the moon should illuminate the water at night
-local specularSize = 5.0			-- Lower value = bigger specular lighting from sun (dynamic sky supported)
+local specularSize = 10.0			-- Lower value = bigger specular lighting from sun (dynamic sky supported)
 local flowSpeed = 0.5				-- Movement speed of the water
 local reflectionSharpness = 0.1	-- lower value = sharper reflection
 local reflectionStrength = 1		-- How much reflection?
@@ -71,50 +71,51 @@ end
 end
 
 function updateShaders()
-if waterShader and ScreenInput then
-	-- get Time with seconds
-	local ho, mi = getTime()
-	local se = 0
-	if mi ~= currentMinute then
-		minuteStartTickCount = getTickCount()
-		local gameSpeed = math.clamp(0.01, getGameSpeed(), 10)
-		minuteEndTickCount = minuteStartTickCount + getMinuteDuration() / gameSpeed
+	if waterShader and ScreenInput then
+		-- get Time with seconds
+		local ho, mi = getTime()
+		local se = 0
+		if mi ~= currentMinute then
+			minuteStartTickCount = getTickCount()
+			local gameSpeed = math.clamp(0.01, getGameSpeed(), 10)
+			minuteEndTickCount = minuteStartTickCount + getMinuteDuration() / gameSpeed
+		end
+		if minuteStartTickCount then
+			local minFraction = math.unlerpclamped(minuteStartTickCount, getTickCount(), minuteEndTickCount)
+			se = math_min (59, math.floor(minFraction * 60)) / 60 -- divide seconds by 60 to make it more useful
+		end
+		currentMinute = mi
+		local shiningPower = getShiningPower(ho, mi, se)
+		local sunX, sunY, sunZ = 0, 0, 0
+		local moonX, moonY, moonZ = 0, 0, 0
+		local skyResource = getResourceFromName("sky")
+		if skyResource and getResourceState(skyResource) == "running" and exports.sky:isDynamicSkyEnabled() then-- try to get sun position from dynamic sky
+			local px, py, pz = getElementPosition(localPlayer)
+			local x, y, z = exports.sky:getDynamicSunVector()
+			local dist = getFarClipDistance()*0.8
+			sunX, sunY, sunZ = px - x*dist, py - y*dist, pz - z*dist
+			x, y, z = exports.sky:getDynamicMoonVector()
+			moonX, moonY, moonZ = px - x*dist, py - y*dist, pz - z*dist
+		else
+			shiningPower = 0-- if no sun position is available, disable specular lighting
+		end
+		local cr, cg, cb = getSunColor()
+		local nightModifier = 1
+		if ho >= 21 or ho < 5 then-- at night sun color is now moon color, sun position is now moon position, specular strength is lower
+			cr, cg, cb = 255, 255, 255
+			sunX, sunY, sunZ = moonX, moonY, moonZ
+			nightModifier = 0.4
+		end
+		local wr, wg, wb, waterAlpha = getWaterColor()
+		dxUpdateScreenSource(ScreenInput)
+		--dxDrawImage(0,0,800,600,ScreenInput)
+		dxSetShaderValue(waterShader, "dayTime", getDiffuse(ho, mi, se))
+		dxSetShaderValue(waterShader, "waterShiningPower", shiningPower * nightModifier * 1.5)
+		--dxSetShaderValue(waterShader, "waterColor", {wr/255, wg/255, wb/255, waterAlpha/255})
+		dxSetShaderValue(waterShader, "sunColor", {1, 1, 1})-- reduce sun color intensity because it looks garbage otherwise
+		dxSetShaderValue(waterShader, "sunPos", {sunX, sunY, sunZ})
+
 	end
-	if minuteStartTickCount then
-		local minFraction = math.unlerpclamped(minuteStartTickCount, getTickCount(), minuteEndTickCount)
-		se = math_min (59, math.floor(minFraction * 60)) / 60 -- divide seconds by 60 to make it more useful
-	end
-	currentMinute = mi
-	local shiningPower = getShiningPower(ho, mi, se)
-	local sunX, sunY, sunZ = 0, 0, 0
-	local moonX, moonY, moonZ = 0, 0, 0
-	local skyResource = getResourceFromName("sky")
-	if skyResource and getResourceState(skyResource) == "running" and exports.sky:isDynamicSkyEnabled() then-- try to get sun position from dynamic sky
-		local px, py, pz = getElementPosition(localPlayer)
-		local x, y, z = exports.sky:getDynamicSunVector()
-		local dist = getFarClipDistance()*0.8
-		sunX, sunY, sunZ = px - x*dist, py - y*dist, pz - z*dist
-		x, y, z = exports.sky:getDynamicMoonVector()
-		moonX, moonY, moonZ = px - x*dist, py - y*dist, pz - z*dist
-	else
-		shiningPower = 0-- if no sun position is available, disable specular lighting
-	end
-	local cr, cg, cb = getSunColor()
-	local nightModifier = 1
-	if ho >= 21 or ho < 5 then-- at night sun color is now moon color, sun position is now moon position, specular strength is lower
-		cr, cg, cb = 255, 255, 255
-		sunX, sunY, sunZ = moonX, moonY, moonZ
-		nightModifier = 0.4
-	end
-	local wr, wg, wb, waterAlpha = getWaterColor()
-	dxUpdateScreenSource(ScreenInput)
-	--dxDrawImage(0,0,800,600,ScreenInput)
-	dxSetShaderValue(waterShader, "dayTime", getDiffuse(ho, mi, se))
-	dxSetShaderValue(waterShader, "waterShiningPower", shiningPower * nightModifier)
-	--dxSetShaderValue(waterShader, "waterColor", {wr/255, wg/255, wb/255, waterAlpha/255})
-	dxSetShaderValue(waterShader, "sunColor", {1, 1, 1})-- reduce sun color intensity because it looks garbage otherwise
-	dxSetShaderValue(waterShader, "sunPos", {sunX, sunY, sunZ})
-end
 end
 
 function getDiffuse(ho, mi, se)

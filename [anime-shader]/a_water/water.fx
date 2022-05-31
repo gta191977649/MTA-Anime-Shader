@@ -2,7 +2,7 @@
 #include "mta-helper.fx"
 int gCapsMaxAnisotropy < string deviceCaps="MaxAnisotropy"; >;
 
-static const int rays = 5;
+static const int rays = 6;
 float deepness = 0.5;
 float2 sPixelSize = float2(0,0);
 texture screenInput;
@@ -22,7 +22,8 @@ float3 sunPos = float3(0, 0, 0);
 float3 sunColor = float3(0.9, 0.7, 0.6);
 float specularSize = 4;
 float waterShiningPower = 1;
-
+float contrast = 0;
+float saturation = 0;
 #define mod(x, y) (x - y * floor(x / y))
 
 
@@ -64,6 +65,23 @@ sampler SamplerDepth = sampler_state
 //-- Get value from the depth buffer
 //-- Uses define set at compile time to handle RAWZ special case (which will use up a few more slots)
 //--------------------------------------------------------------------------------------
+float4 GetGray (float4 inColor)
+{
+	return dot (inColor , float4 (0.3,0.6,0.1,1.0));
+
+}
+float4 GetContrast (float4 inColor)
+{
+	return (inColor + (GetGray(inColor) -0.5) * contrast);
+
+}
+float4 GetSaturation (float4 inColor)
+{
+	float average = (inColor.r + inColor.g + inColor.b) / 3;
+	inColor.rgb +=  (inColor.rgb - average) * saturation;
+	return inColor;
+}
+
 float4 cosine_gradient(float x,  float4 phase, float4 amp, float4 freq, float4 offset)
 {
     float TAU = 2. * 3.14159265;
@@ -250,7 +268,7 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
     float4 cos_grad = cosine_gradient(saturate(1-diffZ), phases, amplitudes, frequencies, offsets);	
 
 
-	float4 reflectionColor = waterColor;
+	float4 reflectionColor = cos_grad;
 	if (gCameraPosition.z > input.worldPosition.z) {// only reflect when camera is above water
 		float3 viewDir = normalize(input.worldPosition - gCameraPosition);// get to pixel view direction
 		float3 reflectDir = normalize(reflect(viewDir, input.worldNormal));// reflection direction
@@ -310,7 +328,10 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 		// lerp between reflection and water color to filter out reflection artifacts
 		//reflectionColor = lerp(reflectionColor, cos_grad, err);
 		reflectionColor = lerp(waterColor, reflectionColor, reflectionStrength);// lerp between water color and reflection color according to the reflection strength setting
-		//reflectionColor = float4(1,1,1,1);
+		
+		//try to fix the reflection flicking at least, but it's not a optimal approach (nurupo)
+		float fade2Normal = abs(dot(gCameraDirection,input.worldNormal));
+		reflectionColor = lerp(cos_grad,reflectionColor,saturate((0.3-fade2Normal) * 5));
 	}
 
 	//Create water caustics, originally made by genius "Dave Hoskins" @ https://www.shadertoy.com/view/MdlXz8
@@ -359,8 +380,8 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	//foamCoords.x += sin ((foamCoords.x + foamCoords.y) * 22 + gTime * speed) * scaling;
 	//foamCoords.x += cos (foamCoords.y * 22 + gTime * speed) * scaling;
 	// tiling
-	foamCoords.x = foamCoords.x/100 ;
-	foamCoords.y = foamCoords.y/20;
+	foamCoords.x = foamCoords.x/50 ;
+	foamCoords.y = foamCoords.y/10;
 
 	foamCoords.y -= gTime*speed;
 	float4 foamColor = tex2D(foamSampler, foamCoords * scaling);
@@ -369,18 +390,25 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	foamColor = saturate((foamColor.r  +foamColor.g ));	
 	// Combine water color, refraction, foam and caustics to the finalColor.
 
+
 	float4 finalColor = (refractionColor + cos_grad) * reflectionColor ;
+	
 	float alpha = waterDepth * deepness * waterColor.a;
 	//float4 finalColor =  reflectionColor * cos_grad  ;
 
-	finalColor.rgb = saturate(finalColor.rgb + specularColor * waterShiningPower);
-	finalColor.rgb = lerp(finalColor.rgb,reflectionColor.rgb,smoothstep(0.1, 1, finalColor.a));
 	
+	finalColor = lerp(finalColor,reflectionColor,smoothstep(0.1, 1, finalColor.a));
+	finalColor.rgb = saturate(finalColor.rgb + specularColor * waterShiningPower);
 	finalColor.a = alpha;
-	finalColor = lerp(foamColor * saturate(0.5 + dayTime), finalColor, smoothstep(0, 10, waterDepth));
+	finalColor = lerp(foamColor * saturate(0.5 + dayTime), finalColor, smoothstep(0,1.5, waterDepth));
 	//finalColor.rgb *= saturate(0.15 + dayTime);
 	// test color code
 	//finalColor = reflectionColor;
+	float3 g = input.worldPosition.xyz - gCameraPosition.xyz;
+	//create a edge light
+	finalColor.rgb += specularColor.rgb * ddy(1-length(g.xy)/50);
+	finalColor = GetContrast(finalColor);
+	finalColor = GetSaturation(finalColor);
 	return float4(MTAApplyFog(finalColor.rgb, input.worldPosition), finalColor.a);
 }
 
