@@ -53,8 +53,8 @@ function getNormalAngle(rotation)
 	return math.mod( rotation, 360 )
 end
 function getDynamicSunVector()
-    getTimeAspect()
 	local vecX, vecY, vecZ = eulerToVectorXY(math.rad(getNormalAngle(sunPreRotation[1])), math.rad(getNormalAngle(( getTimeAspect() * 360 ) + 
 	sunPreRotation[2])), math.rad(getNormalAngle(sunPreRotation[3])))
 	return vecX, vecY, vecZ
 end
+

@@ -25,4 +25,5 @@
 	<!-- textures  -->
 	<file src="Textures/lensflare_dirt.png" type="client" cache="false"/>
 	<file src="Textures/lensflare_chroma.png" type="client" cache="false"/>
+	
 </meta>

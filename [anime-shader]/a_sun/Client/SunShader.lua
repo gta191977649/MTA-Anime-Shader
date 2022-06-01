@@ -1,7 +1,7 @@
 local SunInstance = nil
 
 SunShader = {}
-resetSunSize()
+--resetSunSize()
 resetSunColor()
 resetSkyGradient()
 resetFarClipDistance()
@@ -153,19 +153,15 @@ function SunShader:update()
 			-- check if can see through
 			local px,py,pz = getElementPosition(getLocalPlayer())
 			if getElementInterior(localPlayer) == 0 then
-				self.sunSize = getSunSize () 
+				--self.sunSize = getSunSize () 
+				self.sunSize = 0.05
 			else
 				self.sunSize = 0
 			end
-			--[[
-			if isLineOfSightClear(px, py, pz, self.sunX, self.sunY, self.sunZ) then 
-				self.sunSize = getSunSize () 
-			else 
-				self.sunSize = 0
-			end
-			]]
+		
 
 			local inX,inY,inZ,outX,outY,outZ = getSunColor ()
+	
 			--print(inX)
 			self.sunColorInner = {inX/255,inY/255,inZ/255,1}
 			self.sunColorOuter = {outX/255,outY/255,outZ/255,1}
@@ -239,16 +235,16 @@ function SunShader:update()
 		
 				dxSetShaderValue(self.lensFlareShader, "screenSource", self.screenSource)
 				dxSetShaderValue(self.lensFlareShader, "sunLight", self.renderTargetGodRays)
-				--dxSetShaderValue(self.lensFlareShader, "lensDirt", self.lensFlareDirt)
-				--dxSetShaderValue(self.lensFlareShader, "lensChroma", self.lensFlareChroma)
+				dxSetShaderValue(self.lensFlareShader, "lensDirt", self.lensFlareDirt)
+				dxSetShaderValue(self.lensFlareShader, "lensChroma", self.lensFlareChroma)
 				dxSetShaderValue(self.lensFlareShader, "sunPos", {(1 / self.screenWidth) * self.sunScreenX, (1 / self.screenHeight) * self.sunScreenZ})
 				dxSetShaderValue(self.lensFlareShader, "sunColor", self.sunColorInner)
 				dxSetShaderValue(self.lensFlareShader, "screenSize", {self.screenWidth, self.screenHeight})
 				
-				--dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.bwShader)
-				--dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.sunShader)
-				--dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.godRayBaseShader)
-				--dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.godRayShader)
+				dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.bwShader)
+				dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.sunShader)
+				dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.godRayBaseShader)
+				dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.godRayShader)
 				dxDrawImage(0, 0, self.screenWidth, self.screenHeight, self.lensFlareShader)
 			
 			end
@@ -350,7 +346,7 @@ function SunShader:removeShaders()
 	end
 	
 	--setTime(12,0)
-	resetSunSize()
+	--resetSunSize()
 	resetSunColor()
 	resetSkyGradient()
 	resetFarClipDistance()
@@ -390,11 +386,12 @@ end)
 
 
 addEventHandler("onClientResourceStart", resourceRoot, function(resource)
-	resetSunSize()
+	--resetSunSize()
 	resetSunColor()
 	resetSkyGradient()
 	resetFarClipDistance()
 	resetFogDistance()
+	--switchSun(true)
 end)
 
 
