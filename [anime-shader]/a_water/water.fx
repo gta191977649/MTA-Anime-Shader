@@ -220,6 +220,9 @@ PixelInputType WaterVertexShader(VertexInputType input)
 float map(float value, float min1, float max1, float min2, float max2) {
   return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Pixel Shader
 ////////////////////////////////////////////////////////////////////////////////
@@ -232,7 +235,7 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	float2 txcoord = (input.vposition.xy / input.vposition.w) * float2(0.5, -0.5) + 0.5;
 	txcoord += 0.5 * sPixelSize;
 	
-
+	float3 viewDir = normalize(input.worldPosition - gCameraPosition);// get to pixel view direction
 	
 	// Sample the normal from the normal map texture.
 	float2 movingTextureCoords = input.textureCoords.xy;
@@ -267,10 +270,10 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
     //按照距离海滩远近叠加渐变色
     float4 cos_grad = cosine_gradient(saturate(1-diffZ), phases, amplitudes, frequencies, offsets);	
 
+	
 
 	float4 reflectionColor = cos_grad;
 	if (gCameraPosition.z > input.worldPosition.z) {// only reflect when camera is above water
-		float3 viewDir = normalize(input.worldPosition - gCameraPosition);// get to pixel view direction
 		float3 reflectDir = normalize(reflect(viewDir, input.worldNormal));// reflection direction
 		float3 currentRay = 0;
 		float2 nuv = 0;
@@ -387,7 +390,7 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	float4 foamColor = tex2D(foamSampler, foamCoords * scaling);
 	
 	foamColor = step(0.5,foamColor);
-	foamColor = saturate((foamColor.r  +foamColor.g ));	
+	foamColor = saturate((foamColor.r  +foamColor.g )) * saturate(0.5 + dayTime);	
 	// Combine water color, refraction, foam and caustics to the finalColor.
 
 
@@ -399,17 +402,33 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	
 	finalColor = lerp(finalColor,reflectionColor,smoothstep(0.1, 1, finalColor.a));
 	finalColor.rgb = saturate(finalColor.rgb + specularColor * waterShiningPower);
+	
+	float dist = distance(input.worldPosition,gCameraPosition);
+	float foamAlpha = lerp(1,0,saturate(20/dist));
+	foamColor.a *= foamAlpha;
+	
+	finalColor.a = lerp(0, finalColor.a, smoothstep(0,5, waterDepth));
 	finalColor.a = alpha;
-	finalColor = lerp(foamColor * saturate(0.5 + dayTime), finalColor, smoothstep(0,1.5, waterDepth));
+	finalColor = lerp(foamColor  , finalColor, smoothstep(0,2, waterDepth));
+	
 	//finalColor.rgb *= saturate(0.15 + dayTime);
 	// test color code
 	//finalColor = reflectionColor;
 	float3 g = input.worldPosition.xyz - gCameraPosition.xyz;
+
+	//create CausticColor
+	//float3 CausticColor = float3(1,0,0);
+	//float3 Caustic = lerp(lerp(0,1, saturate(colour)), finalColor.rgb, 0);
+
 	//create a edge light
 	finalColor.rgb += specularColor.rgb * ddy(1-length(g.xy)/50);
+	
 	finalColor = GetContrast(finalColor);
 	finalColor = GetSaturation(finalColor);
+	
+	//finalColor.rgb = Caustic.rgb;
 	return float4(MTAApplyFog(finalColor.rgb, input.worldPosition), finalColor.a);
+	
 }
 
 technique WaterTechnique

@@ -9,7 +9,7 @@ local refractionStrength = 0.15		-- Strength of the refraction (Only surface ref
 local causticStrength = 2			-- Surface caustic wave effect strength
 local causticSpeed = 0.5			-- Caustic movement speed
 local causticIterations = 50		-- Caustic detail
-local shoreFadeStrength = 0.03	-- lower value = stronger shore fading
+local shoreFadeStrength = 0.035	-- lower value = stronger shore fading
 --#######################
 
 local width, height = guiGetScreenSize()
