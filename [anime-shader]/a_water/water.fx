@@ -293,9 +293,10 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 			d = FetchDepthBufferValue(nuv);
 		
 			float3 newPosition = GetPosition(nuv, d);
-			L = length(input.worldPosition - newPosition);
+			//L = length(input.worldPosition - newPosition);
+			L = length( newPosition);
 		}
-		
+
 		// Currently we get some flickering pixels because 2 pixels from the main view can be merged into our final reflection result and the computer does not know which
 		// pixel should prevail. We can solve this by sorting the projection from top-to-bottom so we only write the pixel closer to the water plane. But i dont know how to do this.
 		// Ghost recon wildlands reflections use the InterlockedMax function, but i dont know how to implement this here:
@@ -327,6 +328,7 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 
 		float fresnel = saturate(1.5 * dot(viewDir, -input.worldNormal));
 		reflectionColor = lerp(tex2D(screenSampler, nuv), waterColor, mask);	// lerp between new reflection and water color with the corona mask
+		//reflectionColor = tex2D(screenSampler, nuv);	// lerp between new reflection and water color with the corona mask
 		reflectionColor = lerp(reflectionColor, cos_grad, fresnel);			// lerp between reflection and fresnel value to make the reflection slowly lose color
 		// lerp between reflection and water color to filter out reflection artifacts
 		//reflectionColor = lerp(reflectionColor, cos_grad, err);

@@ -1,0 +1,12 @@
+<meta>
+	<info name="water refract" version="0.1.6e" type="script" />
+	<min_mta_version client="1.5.9" server="1.5.9" />
+	<script src="c_main.lua" type="client" />
+	<script src="c_switch.lua" type="client" />
+	<file src="fx/mta-helper.fx" type="client" />
+	<file src="fx/img_refract_MRT_DB.fx" type="client" />
+	<file src="fx/tex_water_MRT_DB.fx" type="client" />
+	<file src="images/cube_env256.dds" type="client" />
+	<file src="images/waterClear_NRM.png" type="client" />
+	<file src="images/foam.png" type="client" />
+</meta>

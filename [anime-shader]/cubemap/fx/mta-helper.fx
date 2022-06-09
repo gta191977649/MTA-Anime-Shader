@@ -1,8 +1,7 @@
 //
 // mta-helper.fx
 //
-// File version: 0.0.3
-// Date updated: 2014-09-03
+// File version: 1.2.1-custom.
 //
 // Big file of doom containg most of the stuff you need to get shaders working with MTA
 // Added light states to support pointlights
@@ -115,9 +114,7 @@ texture gTexture3           < string textureState="3,Texture"; >;
 //------------------------------------------------------------------------------------------
 // vertexDeclState  (partial)
 //------------------------------------------------------------------------------------------
-
 int gDeclNormal             < string vertexDeclState="Normal"; >;       // Set to 1 if vertex stream includes normals
-
 
 
 //------------------------------------------------------------------------------------------
@@ -259,16 +256,46 @@ float4 MTACalcGTABuildingDiffuse( float4 InDiffuse )
 }
 
 //------------------------------------------------------------------------------------------
-// MTACalcGTADynamicDiffuse
-// - Calculate GTA lighting for vehicles (all 4 lights)
+// MTACalcGTAVehicleDiffuse
+// - Calculate GTA lighting for vehicles
 //------------------------------------------------------------------------------------------
-float4 MTACalcGTADynamicDiffuse( float3 WorldNormal )
+float4 MTACalcGTAVehicleDiffuse( float3 WorldNormal, float4 InDiffuse )
 {
+    // Calculate diffuse color by doing what D3D usually does
+    float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
+    float4 diffuse  = gDiffuseMaterialSource  == 0 ? gMaterialDiffuse  : InDiffuse;
+    float4 emissive = gEmissiveMaterialSource == 0 ? gMaterialEmissive : InDiffuse;
+
+    float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
+
+    // Add the strongest light
+    float DirectionFactor = max(0,dot(WorldNormal, -gLightDirection ));
+    float4 TotalDiffuse = ( diffuse * gLightDiffuse * DirectionFactor );
+
+    float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
+    OutDiffuse.a *= diffuse.a;
+
+    return OutDiffuse;
+}
+
+//------------------------------------------------------------------------------------------
+// MTACalcGTACompleteDiffuse
+// - Calculate GTA lighting including pointlights for vehicles (all 4 lights)
+//------------------------------------------------------------------------------------------
+float4 MTACalcGTACompleteDiffuse( float3 WorldNormal, float4 InDiffuse )
+{
+    // Calculate diffuse color by doing what D3D usually does
+    float4 ambient  = gAmbientMaterialSource  == 0 ? gMaterialAmbient  : InDiffuse;
+    float4 diffuse  = gDiffuseMaterialSource  == 0 ? gMaterialDiffuse  : InDiffuse;
+    float4 emissive = gEmissiveMaterialSource == 0 ? gMaterialEmissive : InDiffuse;
+
+    float4 TotalAmbient = ambient * ( gGlobalAmbient + gLightAmbient );
+
     // Add all the 4 pointlights
     float DirectionFactor=0;
     float4 TotalDiffuse=0;
-
-    if (gLight1Enable) {
+	
+    if ((gLight1Enable) && (gSpecularMaterialSource == 0)) {
     DirectionFactor = max(0,dot(WorldNormal, -gLight1Direction ));
     TotalDiffuse += ( gLight1Diffuse * DirectionFactor );
                      }
@@ -284,7 +311,42 @@ float4 MTACalcGTADynamicDiffuse( float3 WorldNormal )
     DirectionFactor = max(0,dot(WorldNormal, -gLight4Direction ));
     TotalDiffuse += ( gLight4Diffuse * DirectionFactor );
                      }	
-	
+
+    TotalDiffuse *= diffuse;
+
+    float4 OutDiffuse = saturate(TotalDiffuse + TotalAmbient + emissive);
+    OutDiffuse.a *= diffuse.a;
+
+    return OutDiffuse;
+}
+
+//------------------------------------------------------------------------------------------
+// MTACalcGTADynamicDiffuse
+// - Calculate GTA lighting for vehicles (all 4 lights)
+//------------------------------------------------------------------------------------------
+float4 MTACalcGTADynamicDiffuse( float3 WorldNormal )
+{
+    // Add all the 4 pointlights
+    float DirectionFactor=0;
+    float4 TotalDiffuse=0;
+
+    if ((gLight1Enable) && (gSpecularMaterialSource == 0)) {
+    DirectionFactor = max(0,dot(WorldNormal, -gLight1Direction ));
+    TotalDiffuse += ( gLight1Diffuse * DirectionFactor );
+                     }
+    if (gLight2Enable) {
+    DirectionFactor = max(0,dot(WorldNormal, -gLight2Direction ));
+    TotalDiffuse += ( gLight2Diffuse * DirectionFactor );
+                     }
+    if (gLight3Enable) {
+    DirectionFactor = max(0,dot(WorldNormal, -gLight3Direction ));
+    TotalDiffuse += ( gLight3Diffuse * DirectionFactor );
+                     }
+    if (gLight4Enable) {
+    DirectionFactor = max(0,dot(WorldNormal, -gLight4Direction ));
+    TotalDiffuse += ( gLight4Diffuse * DirectionFactor );
+                     }	
+
     float4 OutDiffuse = saturate(TotalDiffuse);
 
     return OutDiffuse;
@@ -357,57 +419,4 @@ void MTAFixUpNormal( in out float3 OutNormal )
     // Incase we have no normal inputted
     if ( OutNormal.x == 0 && OutNormal.y == 0 && OutNormal.z == 0 )
         OutNormal = float3(0,0,1);   // Default to up
-}
-
-
-//--------------------------------------------------------------------------------------
-// Inverse matrix
-//--------------------------------------------------------------------------------------
-float4x4 inverseMatrix(float4x4 input)
-{
-     #define minor(a,b,c) determinant(float3x3(input.a, input.b, input.c))
-     
-     float4x4 cofactors = float4x4(
-          minor(_22_23_24, _32_33_34, _42_43_44), 
-         -minor(_21_23_24, _31_33_34, _41_43_44),
-          minor(_21_22_24, _31_32_34, _41_42_44),
-         -minor(_21_22_23, _31_32_33, _41_42_43),
-         
-         -minor(_12_13_14, _32_33_34, _42_43_44),
-          minor(_11_13_14, _31_33_34, _41_43_44),
-         -minor(_11_12_14, _31_32_34, _41_42_44),
-          minor(_11_12_13, _31_32_33, _41_42_43),
-         
-          minor(_12_13_14, _22_23_24, _42_43_44),
-         -minor(_11_13_14, _21_23_24, _41_43_44),
-          minor(_11_12_14, _21_22_24, _41_42_44),
-         -minor(_11_12_13, _21_22_23, _41_42_43),
-         
-         -minor(_12_13_14, _22_23_24, _32_33_34),
-          minor(_11_13_14, _21_23_24, _31_33_34),
-         -minor(_11_12_14, _21_22_24, _31_32_34),
-          minor(_11_12_13, _21_22_23, _31_32_33)
-     );
-     #undef minor
-     return transpose(cofactors) / determinant(input);
-}
-
-
-//------------------------------------------------------------------------------------------
-// MTAApplyFog
-//------------------------------------------------------------------------------------------
-int gFogEnable                     < string renderState="FOGENABLE"; >;
-float4 gFogColor                   < string renderState="FOGCOLOR"; >;
-float gFogStart                    < string renderState="FOGSTART"; >;
-float gFogEnd                      < string renderState="FOGEND"; >;
- 
-float3 MTAApplyFog( float3 texel, float3 worldPos )
-{
-    if ( !gFogEnable )
-        return texel;
- 
-    float DistanceFromCamera = distance( gCameraPosition, worldPos );
-    float FogAmount = ( DistanceFromCamera - gFogStart )/( gFogEnd - gFogStart );
-    texel.rgb = lerp(texel.rgb, gFogColor, saturate( FogAmount ) );
-    return texel;
 }

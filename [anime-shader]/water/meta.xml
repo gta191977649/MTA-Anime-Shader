@@ -1,0 +1,8 @@
+<meta>
+	<info description="Shader - Water refract test" version="0.0.5" type="script" />
+	<script src="c_water_ref.lua" type="client" />
+	<file src="water_ref.fx" type="client" />
+	<file src="world_ref.fx" type="client" />
+	<file src="mta-helper.fx" type="client" />
+	<file src="images/wavemap.png" type="client" />
+</meta>

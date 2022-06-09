@@ -1,0 +1,17 @@
+<meta>
+	<info author="Ren712" name="cam2_image3d_reftex_gen" version="0.1.2" type="script" />
+	<min_mta_version client="1.5" server="1.5" />
+	<script src="c_main.lua" type="client" />
+	<file src="fx/image3d_1texSwitch2equirectangularTex.fx" type="client" />
+	<file src="fx/image3d_1texSwitch2sphericalTex.fx" type="client" />
+	<file src="fx/image3d_equirectangularSkyTex.fx" type="client" />
+	<file src="fx/image3d_sphericalSkyTex.fx" type="client" />
+	<file src="fx/image3d_drawSky.fx" type="client" />
+	<file src="fx/image3d_equirectangular2animSphere.fx" type="client" />
+	<file src="fx/image3d_equirectangular2view.fx" type="client" />
+	<file src="fx/image4d_lightBall.fx" type="client" />
+	<file src="fx/mta-helper.fx" type="client" />
+	<file src="fx/cam2RTScreen_world.fx" type="client" />
+	<file src="fx/car_paint_ref.fx" type="client" />
+	<file src="tex/cube_xz.png" type="client" />
+</meta>
