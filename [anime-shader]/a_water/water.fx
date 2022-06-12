@@ -260,7 +260,8 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	float dp = 1.0 / (1 - Depth);
 	float planardepth = 1.0 / (1 - cameraDepth);
 	float waterDepth = min(20, planardepth - dp);// Calculates a value between 0 and 10
-	
+	float3 camDist = input.worldPosition.xyz - gCameraPosition.xyz;
+
 	//generate base color
 	const float4 phases = float4(0.28, 0.50, 0.07, 0);//周期
     const float4 amplitudes = float4(4.02, 0.34, 0.65, 0);//振幅
@@ -337,6 +338,8 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 		//try to fix the reflection flicking at least, but it's not a optimal approach (nurupo)
 		float fade2Normal = abs(dot(gCameraDirection,input.worldNormal));
 		reflectionColor = lerp(cos_grad,reflectionColor,saturate((0.3-fade2Normal) * 5));
+		//Fix far dist reflection glitch
+		reflectionColor = lerp(reflectionColor,cos_grad,saturate(ddy(1-length(camDist.xy)) * 0.6));
 	}
 
 	//Create water caustics, originally made by genius "Dave Hoskins" @ https://www.shadertoy.com/view/MdlXz8
@@ -416,14 +419,15 @@ float4 WaterPixelShader(PixelInputType input) : COLOR0
 	//finalColor.rgb *= saturate(0.15 + dayTime);
 	// test color code
 	//finalColor = reflectionColor;
-	float3 g = input.worldPosition.xyz - gCameraPosition.xyz;
+	
 
 	//create CausticColor
 	//float3 CausticColor = float3(1,0,0);
 	//float3 Caustic = lerp(lerp(0,1, saturate(colour)), finalColor.rgb, 0);
 
 	//create a edge light
-	finalColor.rgb += specularColor.rgb * ddy(1-length(g.xy)/50);
+	
+	finalColor.rgb += specularColor.rgb * ddy(1-length(camDist.xy)/50);
 	
 	finalColor = GetContrast(finalColor);
 	finalColor = GetSaturation(finalColor);

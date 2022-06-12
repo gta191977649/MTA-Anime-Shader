@@ -79,17 +79,17 @@ function setEffectVariables()
     v.cutoff = 0.08
     v.power = 1.5
 	v.blur = 0.5
-    v.bloom = 1.2
+    v.bloom = 1.3
     v.blendR = 204
     v.blendG = 153
     v.blendB = 130
     v.blendA = 100
 
 	-- Debugging
-    v.PreviewEnable=0
+    v.PreviewEnable=1
     v.PreviewPosY=0
     v.PreviewPosX=100
-    v.PreviewSize=70
+    v.PreviewSize=200
 end
 
 -----------------------------------------------------------------------------------
